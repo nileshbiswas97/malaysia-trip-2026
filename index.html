@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f3d3e">
+<title>Malaysia 2026 · Nilesh & Swati</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌴</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{
+  --bg:#faf6ef;
+  --bg2:#f3ecdf;
+  --card:#ffffff;
+  --card2:#fdfaf4;
+  --text:#26221c;
+  --text2:#6f6656;
+  --line:#e8e0d0;
+  --accent:#0e7c7b;         /* deep teal */
+  --accent2:#12999790;
+  --gold:#d9930d;           /* mango gold */
+  --sunset:#e2593b;         /* sunset coral */
+  --sunset2:#f0806040;
+  --ok:#2e8b57;
+  --danger:#cf3f2e;
+  --shadow:0 4px 18px rgba(70,50,20,.09);
+  --shadow-lg:0 10px 34px rgba(70,50,20,.16);
+  --r:18px;
+}
+[data-theme="dark"]{
+  --bg:#141a1c;
+  --bg2:#0e1416;
+  --card:#1d2528;
+  --card2:#212b2e;
+  --text:#f0ece2;
+  --text2:#9aa89f;
+  --line:#2c3a3d;
+  --accent:#2fb8ab;
+  --accent2:#2fb8ab60;
+  --gold:#eebc4e;
+  --sunset:#f4795b;
+  --sunset2:#f4795b30;
+  --ok:#4fc584;
+  --danger:#f16a58;
+  --shadow:0 4px 18px rgba(0,0,0,.35);
+  --shadow-lg:0 10px 34px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Plus Jakarta Sans',system-ui,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  transition:background .35s,color .35s;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom));
+}
+/* ---------- header ---------- */
+.topbar{
+  position:sticky;top:0;z-index:900;
+  display:flex;align-items:center;gap:10px;
+  padding:12px 16px;
+  background:linear-gradient(135deg,#0f3d3e 0%,#0e7c7b 55%,#d9930d 160%);
+  color:#fff;
+  box-shadow:var(--shadow);
+}
+[data-theme="dark"] .topbar{background:linear-gradient(135deg,#0b2627 0%,#0e5a59 55%,#8a5e08 170%)}
+.topbar .logo{font-size:22px}
+.topbar h1{font-size:16px;font-weight:800;letter-spacing:.2px;flex:1;line-height:1.2}
+.topbar h1 small{display:block;font-size:11px;font-weight:500;opacity:.85}
+.syncdot{width:9px;height:9px;border-radius:50%;background:#ffd76e;transition:background .3s;flex:none}
+.syncdot.ok{background:#7effb2}
+.syncdot.err{background:#ff8d7a}
+.iconbtn{
+  background:rgba(255,255,255,.16);border:none;color:#fff;
+  width:36px;height:36px;border-radius:12px;font-size:17px;cursor:pointer;
+  transition:transform .2s,background .2s;flex:none;
+}
+.iconbtn:active{transform:scale(.88)}
+/* ---------- layout ---------- */
+main{max-width:760px;margin:0 auto;padding:16px 14px 30px}
+section.view{display:none;animation:rise .35s ease}
+section.view.active{display:block}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  padding:16px;margin-bottom:14px;box-shadow:var(--shadow);
+  transition:background .35s,border-color .35s,box-shadow .25s,transform .25s;
+}
+.card:hover{box-shadow:var(--shadow-lg)}
+.card h2{font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.card h2 .grow{flex:1}
+.muted{color:var(--text2);font-size:12.5px}
+.pill{display:inline-block;background:var(--bg2);border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-size:11.5px;font-weight:600;color:var(--text2)}
+.tag{display:inline-block;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:700}
+.tag.teal{background:var(--accent2);color:var(--accent)}
+.tag.gold{background:#d9930d26;color:var(--gold)}
+.tag.coral{background:var(--sunset2);color:var(--sunset)}
+.flash{animation:flash 1.2s ease}
+@keyframes flash{0%{box-shadow:0 0 0 3px var(--accent2)}100%{box-shadow:none}}
+/* ---------- hero ---------- */
+.hero{
+  border-radius:22px;padding:22px 18px;margin-bottom:14px;color:#fff;position:relative;overflow:hidden;
+  background:linear-gradient(140deg,#0f3d3e,#0e7c7b 60%,#2fb8ab);
+  box-shadow:var(--shadow-lg);
+}
+.hero::after{content:"🌴";position:absolute;right:-6px;bottom:-16px;font-size:96px;opacity:.14;transform:rotate(-8deg)}
+.hero .sub{font-size:12px;font-weight:600;opacity:.85;letter-spacing:1.4px;text-transform:uppercase}
+.hero .big{font-size:26px;font-weight:800;margin:4px 0 12px}
+.count{display:flex;gap:8px}
+.count div{background:rgba(255,255,255,.14);backdrop-filter:blur(3px);border-radius:14px;padding:8px 0;text-align:center;flex:1;min-width:0}
+.count b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.count span{font-size:10px;opacity:.85;text-transform:uppercase;letter-spacing:1px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.chips span{background:rgba(255,255,255,.15);border-radius:99px;padding:4px 12px;font-size:12px;font-weight:600}
+/* ---------- nav ---------- */
+nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:900;
+  background:var(--card);border-top:1px solid var(--line);
+  display:flex;justify-content:space-around;
+  padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  box-shadow:0 -4px 20px rgba(0,0,0,.08);
+  transition:background .35s;
+}
+nav button{
+  background:none;border:none;color:var(--text2);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  font-family:inherit;font-size:9.5px;font-weight:700;padding:5px 6px;border-radius:12px;
+  transition:color .2s,background .2s,transform .15s;min-width:44px;
+}
+nav button .i{font-size:19px;transition:transform .2s}
+nav button.active{color:var(--accent);background:var(--accent2)}
+nav button.active .i{transform:translateY(-2px) scale(1.12)}
+nav button:active{transform:scale(.9)}
+/* ---------- flights ---------- */
+.flightcard{border-left:4px solid var(--accent);border-radius:14px;background:var(--card2);border:1px solid var(--line);border-left:4px solid var(--accent);padding:12px 14px;margin-bottom:10px}
+.flightcard.past{opacity:.5;border-left-color:var(--line)}
+.frow{display:flex;align-items:center;gap:8px}
+.frow .route{font-size:18px;font-weight:800;letter-spacing:.5px}
+.frow .arrow{color:var(--gold)}
+.ftimes{display:flex;justify-content:space-between;margin-top:8px;font-size:13px}
+.ftimes b{font-size:16px}
+.nextflight .leaveby{
+  margin-top:12px;background:var(--sunset2);border-radius:12px;padding:10px 12px;
+  font-size:13px;font-weight:600;color:var(--sunset);display:flex;gap:8px;align-items:center;
+}
+.airportck{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.airportck label{display:flex;gap:7px;align-items:center;font-size:12.5px;background:var(--bg2);border-radius:10px;padding:8px 10px;cursor:pointer;border:1px solid var(--line)}
+.airportck input:checked+span{text-decoration:line-through;opacity:.55}
+/* ---------- timeline ---------- */
+.tl{position:relative;padding-left:26px}
+.tl::before{content:"";position:absolute;left:9px;top:6px;bottom:6px;width:2.5px;border-radius:2px;background:linear-gradient(var(--accent),var(--gold),var(--sunset))}
+.tlitem{position:relative;padding:0 0 16px 8px}
+.tlitem::before{content:"";position:absolute;left:-23px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--dot,var(--accent));border:2.5px solid var(--card);box-shadow:0 0 0 2px var(--dot,var(--accent))}
+.tlitem .d{font-size:11.5px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px}
+.tlitem .c{font-size:15px;font-weight:800;margin:1px 0}
+.tlitem .p{font-size:13px;color:var(--text2);line-height:1.45}
+.tlitem.today{background:var(--accent2);margin-left:-8px;padding:10px 10px 12px 16px;border-radius:14px}
+.tlitem.today .d::after{content:" · TODAY";color:var(--accent)}
+/* ---------- budget ---------- */
+.bignum{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums}
+.statrow{display:flex;gap:10px;margin-bottom:14px}
+.stat{flex:1;background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}
+.stat b{display:block;font-size:18px;font-variant-numeric:tabular-nums}
+.stat span{font-size:10.5px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+.bar{height:9px;background:var(--bg2);border-radius:99px;overflow:hidden;margin-top:5px}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.bar i.warn{background:var(--gold)}
+.bar i.over{background:var(--danger)}
+.catrow{margin-bottom:12px}
+.catrow .t{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600}
+.catrow .t span:last-child{color:var(--text2);font-variant-numeric:tabular-nums}
+.donutwrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center}
+.legend{font-size:12px;display:grid;gap:5px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px}
+.spenditem{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)}
+.spenditem:last-child{border-bottom:none}
+.spenditem .ic{width:34px;height:34px;border-radius:11px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+.spenditem .mid{flex:1;min-width:0}
+.spenditem .mid b{font-size:13.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spenditem .mid span{font-size:11.5px;color:var(--text2)}
+.spenditem .amt{font-weight:800;font-variant-numeric:tabular-nums;font-size:14px}
+/* ---------- forms ---------- */
+form .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+form .full{grid-column:1/-1}
+label.f{display:block;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+input,select,textarea{
+  width:100%;background:var(--bg2);border:1.5px solid var(--line);border-radius:12px;
+  padding:10px 12px;font-family:inherit;font-size:14px;color:var(--text);
+  transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent2)}
+.btn{
+  background:var(--accent);color:#fff;border:none;border-radius:12px;
+  padding:11px 18px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;
+  transition:transform .15s,filter .2s;display:inline-flex;align-items:center;gap:7px;
+}
+.btn:active{transform:scale(.95)}
+.btn:disabled{opacity:.55}
+.btn.ghost{background:var(--bg2);color:var(--text);border:1.5px solid var(--line)}
+.btn.small{padding:7px 12px;font-size:12.5px;border-radius:10px}
+.btn.coral{background:var(--sunset)}
+/* ---------- checklist ---------- */
+.ck{display:flex;gap:11px;align-items:flex-start;padding:10px 2px;border-bottom:1px dashed var(--line);cursor:pointer}
+.ck:last-child{border-bottom:none}
+.ck input{width:auto;accent-color:var(--accent);width:19px;height:19px;margin-top:1px;flex:none;cursor:pointer}
+.ck .t{flex:1;font-size:14px;font-weight:600;line-height:1.35;transition:opacity .3s}
+.ck .due{font-size:11px;color:var(--text2);display:block;font-weight:600;margin-top:2px}
+.ck.done .t{opacity:.45;text-decoration:line-through}
+.ck.overdue .t{color:var(--danger)}
+.ck.overdue .due{color:var(--danger);font-weight:800}
+.grouphead{font-size:11.5px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin:14px 0 2px}
+.grouphead.red{color:var(--danger)}
+/* ---------- activities ---------- */
+.citytabs{display:flex;gap:8px;margin-bottom:12px}
+.citytabs button{
+  flex:1;background:var(--bg2);border:1.5px solid var(--line);border-radius:12px;color:var(--text2);
+  padding:9px 4px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;transition:all .2s;
+}
+.citytabs button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+#map{height:280px;border-radius:14px;border:1px solid var(--line);z-index:1}
+.actcard{background:var(--card2);border:1px solid var(--line);border-radius:13px;padding:11px 13px;margin-bottom:9px}
+.actcard b{font-size:14px}
+.actcard .n{font-size:12.5px;color:var(--text2);margin-top:3px;line-height:1.4}
+/* ---------- tips ---------- */
+.tip{background:#d9930d14;border:1px solid #d9930d3d;border-radius:13px;padding:11px 13px;font-size:12.5px;line-height:1.55;margin-top:12px}
+.tip b{color:var(--gold)}
+.dodont{display:grid;grid-template-columns:1fr;gap:8px;font-size:12.5px;line-height:1.5}
+@media(min-width:560px){.dodont{grid-template-columns:1fr 1fr}}
+.dodont .do,.dodont .dont{border-radius:12px;padding:10px 12px}
+.dodont .do{background:#2e8b5715;border:1px solid #2e8b5735}
+.dodont .dont{background:#cf3f2e12;border:1px solid #cf3f2e30}
+.dodont b{display:block;margin-bottom:4px}
+.dodont .do b{color:var(--ok)}.dodont .dont b{color:var(--danger)}
+.dodont ul{padding-left:16px}
+/* ---------- currency ---------- */
+.convrow{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.convrow select{width:92px;flex:none;font-weight:700}
+.swapbtn{align-self:center;margin:2px auto 10px;display:block}
+.rateout{background:linear-gradient(135deg,var(--accent2),transparent);border:1.5px solid var(--accent);border-radius:14px;padding:14px;text-align:center;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.cheat{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:8px;margin-top:10px}
+.cheat div{background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:8px 10px;font-size:12px;text-align:center}
+.cheat b{display:block;font-size:14px}
+/* ---------- misc ---------- */
+.fab{
+  position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:800;
+  width:54px;height:54px;border-radius:18px;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--sunset),var(--gold));color:#fff;font-size:24px;
+  box-shadow:0 8px 24px rgba(226,89,59,.45);transition:transform .2s;
+}
+.fab:active{transform:scale(.88)}
+#toast{
+  position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+  background:var(--text);color:var(--bg);padding:11px 20px;border-radius:99px;font-size:13.5px;font-weight:700;
+  opacity:0;pointer-events:none;transition:all .35s;z-index:1000;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.empty{padding:22px 10px;text-align:center;color:var(--text2);font-size:13px}
+.skel{height:56px;border-radius:12px;background:linear-gradient(90deg,var(--bg2) 25%,var(--line) 50%,var(--bg2) 75%);background-size:200% 100%;animation:sk 1.3s infinite;margin-bottom:8px}
+@keyframes sk{from{background-position:200% 0}to{background-position:-200% 0}}
+details.addbox{border-top:1px dashed var(--line);margin-top:12px;padding-top:10px}
+details.addbox summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--accent);list-style:none}
+details.addbox summary::before{content:"＋ "}
+details.addbox[open] summary::before{content:"− "}
+details.addbox form{margin-top:12px}
+.bday{background:linear-gradient(135deg,#e2593b18,#d9930d18);border:1.5px dashed var(--gold)}
+@media(min-width:700px){
+  .count b{font-size:28px}
+  nav{max-width:760px;left:50%;transform:translateX(-50%);border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:none}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <span class="logo">🇲🇾</span>
+  <h1>Malaysia 2026<small>Nilesh & Swati · 24 Jul – 2 Aug</small></h1>
+  <span class="syncdot" id="syncdot" title="sync status"></span>
+  <button class="iconbtn" id="refreshBtn" title="Refresh now">⟳</button>
+  <button class="iconbtn" id="themeBtn" title="Toggle dark mode">🌙</button>
+</header>
+
+<main>
+
+<!-- ═══════════ OVERVIEW ═══════════ -->
+<section class="view active" id="view-overview">
+  <div class="hero" id="hero">
+    <div class="sub" id="heroSub">Countdown to take-off</div>
+    <div class="big" id="heroTitle">Kuala Lumpur · Langkawi · Penang</div>
+    <div class="count" id="countdown">
+      <div><b id="cdD">–</b><span>days</span></div>
+      <div><b id="cdH">–</b><span>hrs</span></div>
+      <div><b id="cdM">–</b><span>min</span></div>
+      <div><b id="cdS">–</b><span>sec</span></div>
+    </div>
+    <div class="chips">
+      <span>🗓️ 10 days</span><span>🏙️ 3 cities + SIN layover</span><span>👫 2 travelers</span><span id="chipBday">🎂 Swati's bday · 27 Jul</span>
+    </div>
+  </div>
+
+  <div class="card" id="ovFlight">
+    <h2>✈️ Next flight <span class="grow"></span><button class="btn small ghost" onclick="go('flights')">All flights</button></h2>
+    <div id="nextFlightBox"><div class="skel"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>💰 Budget pulse <span class="grow"></span><button class="btn small ghost" onclick="go('budget')">Details</button></h2>
+    <div id="ovBudget"><div class="skel"></div></div>
+  </div>
+
+  <div class="card" id="ovToday" style="display:none">
+    <h2>📍 Today's plan</h2>
+    <div id="ovTodayBody"></div>
+  </div>
+
+  <div class="card">
+    <h2>✅ Needs attention <span class="grow"></span><button class="btn small ghost" onclick="go('checklist')">Checklist</button></h2>
+    <div id="ovChecklist"><div class="skel"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>🆘 Essentials</h2>
+    <div class="muted" style="line-height:1.8;font-size:13px">
+      🚨 Malaysia emergency: <b>999</b> &nbsp;·&nbsp; Tourist Police: <b>03-2115 9999</b><br>
+      🇮🇳 Indian High Commission, KL: <b>+60 3-2093 3510</b><br>
+      🧾 <b>MDAC</b> (Malaysia Digital Arrival Card): submit online within <b>3 days before arrival</b> — free, at imigresen-online.imi.gov.my. Both travelers.<br>
+      💳 RM ≈ ₹<span id="essRate">19–20</span> · Malaysia is very card/QR friendly, but keep ~RM300 cash for hawkers & taxis.
+    </div>
+    <div class="tip">💡 <b>Singapore layover note:</b> Indian passport holders need a visa to <i>exit</i> Changi airport. Your 5-hr layover shopping should stay <b>inside transit</b> — Jewel's Rain Vortex is landside, but T2/T3 transit malls + free attractions are excellent. No visa needed if you stay airside on one ticket.</div>
+  </div>
+</section>
+
+<!-- ═══════════ FLIGHTS ═══════════ -->
+<section class="view" id="view-flights">
+  <div class="card nextflight">
+    <h2>🛫 Next flight</h2>
+    <div id="nextFlightBig"><div class="skel"></div></div>
+    <div id="airportCkWrap" style="display:none">
+      <div class="grouphead" style="margin-top:14px">Before leaving for airport</div>
+      <div class="airportck" id="airportCk"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🎫 All flights</h2>
+    <div id="flightsList"><div class="skel"></div><div class="skel"></div></div>
+    <details class="addbox"><summary>Add a flight</summary>
+      <form id="flightForm">
+        <div class="fgrid">
+          <div><label class="f">Date</label><input name="date" type="date" required></div>
+          <div><label class="f">Route (e.g. KUL-LGK)</label><input name="route" placeholder="KUL-LGK" required style="text-transform:uppercase"></div>
+          <div><label class="f">Flight no.</label><input name="fno" placeholder="AK6224" required></div>
+          <div><label class="f">PNR</label><input name="pnr" placeholder="ABC123"></div>
+          <div><label class="f">Departure</label><input name="dep" type="time" required></div>
+          <div><label class="f">Arrival</label><input name="arr" type="time" required></div>
+          <div class="full"><button class="btn" type="submit">Save flight</button></div>
+        </div>
+      </form>
+    </details>
+    <div class="tip">💡 <b>Still to book:</b> KUL→LGK (27 Jul), LGK→PEN (30 Jul — ferry doesn't run anymore, fly or check latest), PEN→KUL (1 Aug). AirAsia & Batik Air are cheapest; book by <b>12 Jul</b> before fares climb. Morning flights = fewer monsoon-season delays.</div>
+  </div>
+
+  <div class="card">
+    <h2>🏨 Hotels</h2>
+    <div id="hotelsList"><div class="skel"></div></div>
+    <details class="addbox"><summary>Add a hotel</summary>
+      <form id="hotelForm">
+        <div class="fgrid">
+          <div><label class="f">City</label><select name="city"><option>Langkawi</option><option>Penang</option><option>Kuala Lumpur</option><option>Other</option></select></div>
+          <div><label class="f">Name</label><input name="name" required placeholder="Hotel name"></div>
+          <div><label class="f">Check-in</label><input name="cin" type="date" required></div>
+          <div><label class="f">Check-out</label><input name="cout" type="date" required></div>
+          <div class="full"><label class="f">Address</label><input name="addr" placeholder="Address / area"></div>
+          <div><label class="f">Booking ref</label><input name="ref" placeholder="Booking.com #"></div>
+          <div><label class="f">Price (₹)</label><input name="price" type="number" min="0" placeholder="12000"></div>
+          <div class="full"><button class="btn" type="submit">Save hotel</button></div>
+        </div>
+      </form>
+    </details>
+    <div class="tip">💡 <b>Where to stay:</b> Langkawi — Pantai Cenang (walkable beach + restaurants, great for the birthday) or Pantai Tengah (quieter). Penang — George Town heritage core (Love Lane / Chulia St area) puts all the street art & food on foot. You only need hotels for 27–31 Jul (4 nights) since KL is covered by Rishabh & Tarushi. 🙏</div>
+  </div>
+</section>
+
+<!-- ═══════════ ITINERARY ═══════════ -->
+<section class="view" id="view-itinerary">
+  <div class="card">
+    <h2>🗓️ Day by day</h2>
+    <div class="tl" id="timeline"><div class="skel"></div><div class="skel"></div></div>
+  </div>
+  <div class="card bday">
+    <h2>🎂 27 Jul — Swati's birthday in Langkawi</h2>
+    <div class="muted" style="font-size:13px;line-height:1.6">
+      Ideas: sunset dinner on Pantai Cenang beach (book <b>La Chocolatine</b> or a beachfront grill in advance), private sunset cruise (~RM250–350/pp, many include dinner), or SkyCab at golden hour. Langkawi is duty-free — a celebratory bottle costs a third of Indian prices. Book the dinner <b>before 20 Jul</b>; good beachfront tables go fast in season.
+    </div>
+  </div>
+  <div class="card">
+    <h2>🧭 Route logic — dos & don'ts</h2>
+    <div class="dodont">
+      <div class="do"><b>✓ Do</b><ul>
+        <li>Fly KUL→LGK direct (~1h5m) rather than via anywhere</li>
+        <li>Langkawi→Penang: fly (30 min) — the passenger ferry has been suspended for years</li>
+        <li>Keep 1 Aug relaxed in KL — buffer day protects the 2 Aug international flight</li>
+      </ul></div>
+      <div class="dont"><b>✗ Don't</b><ul>
+        <li>Don't plan tight same-day connections on domestic + international</li>
+        <li>Don't over-schedule Langkawi — 2 beach days beat 6 rushed sights</li>
+        <li>Don't forget MDAC needs re-checking if plans change</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ BUDGET ═══════════ -->
+<section class="view" id="view-budget">
+  <div class="card">
+    <h2>💰 Budget · ₹1.5L total</h2>
+    <div class="statrow">
+      <div class="stat"><b id="bSpent">–</b><span>Spent</span></div>
+      <div class="stat"><b id="bLeft">–</b><span>Remaining</span></div>
+      <div class="stat"><b id="bPace">–</b><span>Per trip day left</span></div>
+    </div>
+    <div class="bar"><i id="bBar" style="width:0%"></i></div>
+    <div class="muted" style="margin-top:6px" id="bPct"></div>
+  </div>
+
+  <div class="card">
+    <h2>🥧 Where it's going</h2>
+    <div class="donutwrap">
+      <svg id="donut" width="170" height="170" viewBox="0 0 42 42"></svg>
+      <div class="legend" id="donutLegend"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📊 Category vs allocation</h2>
+    <div id="catBars"><div class="skel"></div></div>
+    <div class="tip">💡 Food in Malaysia is gloriously cheap if you eat like a local — hawker meals RM8–15 (₹160–300). The budget-killers are usually <b>activities</b> (SkyCab, island hopping, cable cars add up) and <b>duty-free shopping in Langkawi</b>. Log spends same-day or you'll forget the small ones.</div>
+  </div>
+
+  <div class="card" id="logSpendCard">
+    <h2>📝 Log a spend</h2>
+    <form id="spendForm">
+      <div class="fgrid">
+        <div><label class="f">Amount (₹)</label><input name="amount" type="number" step="0.01" min="0" required placeholder="500" inputmode="decimal"></div>
+        <div><label class="f">Category</label><select name="category">
+          <option>Food</option><option>Transport</option><option>Activities</option>
+          <option>Shopping</option><option>Accommodation</option><option>Flights</option><option>Misc</option>
+        </select></div>
+        <div><label class="f">Date</label><input name="date" type="date" required></div>
+        <div><label class="f">Location <button type="button" class="btn small ghost" id="geoBtn" style="padding:2px 8px;font-size:10.5px">📍 detect</button></label><input name="location" placeholder="Pantai Cenang"></div>
+        <div class="full"><label class="f">Notes</label><input name="notes" placeholder="Beach dinner for 2"></div>
+        <div class="full"><button class="btn coral" type="submit">💸 Log spend</button></div>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>🧾 Recent spends</h2>
+    <div id="spendsList"><div class="skel"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>🛍️ Shopping haul <span class="grow"></span><span class="pill" id="shopTotal">₹0</span></h2>
+    <div class="muted" style="margin-bottom:8px">Auto-collected from spends categorised as Shopping.</div>
+    <div id="shoppingList"><div class="empty">Nothing bought yet — Langkawi duty-free awaits 🛒</div></div>
+  </div>
+</section>
+
+<!-- ═══════════ CHECKLIST ═══════════ -->
+<section class="view" id="view-checklist">
+  <div class="card">
+    <h2>✅ Trip checklist</h2>
+    <div id="checklist"><div class="skel"></div><div class="skel"></div></div>
+    <details class="addbox"><summary>Add a task</summary>
+      <form id="taskForm">
+        <div class="fgrid">
+          <div class="full"><label class="f">Task</label><input name="task" required placeholder="Buy travel insurance"></div>
+          <div><label class="f">Due date</label><input name="due" type="date"></div>
+          <div style="display:flex;align-items:flex-end"><button class="btn" type="submit">Add task</button></div>
+        </div>
+      </form>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>🎒 Pre-trip reference (static)</h2>
+    <div class="muted" style="font-size:13px;line-height:2">
+      🛂 Passports valid 6+ months beyond 2 Aug, 2 blank pages each<br>
+      🧾 MDAC for both — submit 21–23 Jul (within 3 days of arrival)<br>
+      💱 Forex: zero-markup card (Niyo/Scapia/Fi) beats cash rates; carry ~₹8–10k worth RM cash<br>
+      📱 SIM: Airtel/Jio intl roaming is pricey — buy an eSIM (Airalo/Holafly ~₹700 for 10 days) or a Hotlink/CelcomDigi tourist SIM at KUL airport (RM25–35)<br>
+      🏦 Tell your bank + enable intl transactions on cards<br>
+      💉 No vaccines required; carry basic meds (ORS, paracetamol, motion-sickness for island boats)<br>
+      🧳 Packing: light cottons, one modest outfit for mosques (or borrow robes), reef-safe sunscreen, umbrella (July = brief tropical downpours), power adapter <b>Type G</b> (UK 3-pin!)<br>
+      📄 Offline copies: tickets, hotel bookings, passport photos in phone + one printed set
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ ACTIVITIES ═══════════ -->
+<section class="view" id="view-activities">
+  <div class="citytabs" id="cityTabs">
+    <button data-city="Kuala Lumpur" class="active">🏙️ KL</button>
+    <button data-city="Langkawi">🏝️ Langkawi</button>
+    <button data-city="Penang">🎨 Penang</button>
+  </div>
+  <div class="card" style="padding:10px"><div id="map"></div>
+    <div class="muted" style="margin-top:8px">📌 Tap the map to drop a pin — it fills the lat/lng in the form below.</div>
+  </div>
+  <div class="card">
+    <h2>🎯 Saved spots · <span id="actCityName">KL</span></h2>
+    <div id="actList"><div class="empty">No activities saved yet — add discoveries as you research!</div></div>
+    <details class="addbox"><summary>Add activity</summary>
+      <form id="actForm">
+        <div class="fgrid">
+          <div><label class="f">City</label><select name="city"><option>Kuala Lumpur</option><option>Langkawi</option><option>Penang</option></select></div>
+          <div><label class="f">Type</label><select name="type"><option>Sight</option><option>Food</option><option>Beach</option><option>Adventure</option><option>Shopping</option><option>Nature</option><option>Other</option></select></div>
+          <div class="full"><label class="f">Name</label><input name="name" required placeholder="Batu Caves"></div>
+          <div class="full"><label class="f">Notes</label><input name="notes" placeholder="Go before 9am, 272 steps"></div>
+          <div><label class="f">Lat</label><input name="lat" type="number" step="any" placeholder="3.2379"></div>
+          <div><label class="f">Lng</label><input name="lng" type="number" step="any" placeholder="101.6841"></div>
+          <div class="full"><button class="btn" type="submit">Save activity</button></div>
+        </div>
+      </form>
+    </details>
+  </div>
+  <div class="card" id="cityTips"></div>
+</section>
+
+<!-- ═══════════ CURRENCY ═══════════ -->
+<section class="view" id="view-currency">
+  <div class="card">
+    <h2>💱 Convert <span class="grow"></span><span class="pill" id="rateAge">loading rates…</span></h2>
+    <div class="convrow">
+      <input id="cvAmt" type="number" step="any" value="100" inputmode="decimal">
+      <select id="cvFrom"><option>MYR</option><option>INR</option><option>USD</option><option>SGD</option></select>
+    </div>
+    <button class="btn small ghost swapbtn" id="cvSwap">⇅ swap</button>
+    <div class="convrow">
+      <div class="rateout" style="flex:1" id="cvOut">—</div>
+      <select id="cvTo"><option>INR</option><option>MYR</option><option>USD</option><option>SGD</option></select>
+    </div>
+    <div class="cheat" id="cheat"></div>
+  </div>
+  <div class="card">
+    <h2>💳 Money dos & don'ts</h2>
+    <div class="dodont">
+      <div class="do"><b>✓ Do</b><ul>
+        <li>Use a zero-forex-markup card for most payments (GrabPay/cards everywhere)</li>
+        <li>Withdraw RM from Maybank/CIMB ATMs (lower fees) in one-two big pulls</li>
+        <li>Shop duty-free in <b>Langkawi</b> — chocolates, perfume, alcohol at ~60–70% of mainland prices</li>
+      </ul></div>
+      <div class="dont"><b>✗ Don't</b><ul>
+        <li>Don't exchange at airport counters (worst rates) — small amount only</li>
+        <li>Don't accept "pay in INR?" on card machines (dynamic conversion = 5–8% hidden fee) — always pay in MYR</li>
+        <li>Don't carry >RM10k cash through customs (declaration needed)</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<button class="fab" id="fab" title="Log a spend">💸</button>
+<div id="toast"></div>
+
+<nav id="nav">
+  <button data-v="overview" class="active"><span class="i">🏠</span>Home</button>
+  <button data-v="flights"><span class="i">✈️</span>Flights</button>
+  <button data-v="itinerary"><span class="i">🗓️</span>Days</button>
+  <button data-v="budget"><span class="i">💰</span>Budget</button>
+  <button data-v="checklist"><span class="i">✅</span>Tasks</button>
+  <button data-v="activities"><span class="i">🗺️</span>Map</button>
+  <button data-v="currency"><span class="i">💱</span>FX</button>
+</nav>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════════════════════ */
+const API = 'https://script.google.com/macros/s/AKfycbzDxYAhWblJBj_XUrEaoyfQAwkzlvMlBrH6Zy8s--FHzJsXxN2ohGNulwbU2gQ0J0GQ/exec';
+const TRIP_START = new Date(2026, 6, 24, 9, 0, 0);   // 24 Jul 2026 09:00 dep DEL
+const TRIP_END   = new Date(2026, 7, 2, 23, 59, 0);  // 2 Aug 2026
+const SHEET_TZ_OFFSET_MIN = 330;                      // sheet timezone (IST) — for decoding auto-converted times
+const POLL_FAST = 18000, POLL_SLOW = 90000;
+const TOTAL_BUDGET = 150000;
+const CATS = ['Flights','Accommodation','Food','Transport','Activities','Shopping','Misc'];
+const CAT_ICON = {Flights:'✈️',Accommodation:'🏨',Food:'🍜',Transport:'🚕',Activities:'🎡',Shopping:'🛍️',Misc:'📦'};
+const CAT_COLOR = {Flights:'#0e7c7b',Accommodation:'#d9930d',Food:'#e2593b',Transport:'#5b8dd9',Activities:'#8e5bd9',Shopping:'#d95b9a',Misc:'#8a9a5b'};
+const CITY_CENTER = {'Kuala Lumpur':[3.1478,101.6953],'Langkawi':[6.3372,99.7480],'Penang':[5.4171,100.3288]};
+const CITY_DOT = {'Kuala Lumpur':'#0e7c7b','Langkawi':'#d9930d','Penang':'#e2593b','Singapore → Home':'#5b8dd9'};
+
+const HEADERS = {
+  Flights:['Date','Route','FlightNo','Departure','Arrival','PNR'],
+  Hotels:['City','Name','CheckIn','CheckOut','Address','BookingRef','Price'],
+  Itinerary:['Date','City','Plan'],
+  Budget:['Category','AllocatedAmount'],
+  Spends:['Date','Amount','Category','Location','Notes'],
+  Checklist:['Task','Done','DueDate'],
+  Activities:['City','Name','Type','Notes','Lat','Lng'],
+};
+
+const SEEDS = {
+  Flights:[
+    ["'24-Jul-2026",'DEL-SIN','SQ401',"'09:00","'17:15",''],
+    ["'24-Jul-2026",'SIN-KUL','SQ126',"'18:30","'19:45",''],
+    ["'02-Aug-2026",'KUL-SIN','SQ105',"'10:25","'11:45",''],
+    ["'02-Aug-2026",'SIN-DEL','SQ406',"'16:45","'20:05",''],
+  ],
+  Hotels:[],
+  Itinerary:[
+    ["'24-Jul-2026",'Kuala Lumpur','Land KUL 19:45 — stay with Rishabh & Tarushi'],
+    ["'25-Jul-2026",'Kuala Lumpur','Explore the city with Rishabh & Tarushi'],
+    ["'26-Jul-2026",'Kuala Lumpur','Explore the city with Rishabh & Tarushi'],
+    ["'27-Jul-2026",'Langkawi',"🎂 Swati's birthday — fly to Langkawi, sunset celebration"],
+    ["'28-Jul-2026",'Langkawi','Island day — beaches / SkyCab / island hopping'],
+    ["'29-Jul-2026",'Langkawi','Langkawi — mangroves, duty-free shopping'],
+    ["'30-Jul-2026",'Penang','Fly to Penang — George Town evening walk'],
+    ["'31-Jul-2026",'Penang','Penang — street art, Penang Hill, hawker food crawl'],
+    ["'01-Aug-2026",'Kuala Lumpur','Fly back to KL — stay with Rishabh & Tarushi'],
+    ["'02-Aug-2026",'Singapore → Home','Fly home via Singapore — 5hr Changi layover for shopping'],
+  ],
+  Budget:[
+    ['Flights',49000],['Accommodation',38000],['Food',20000],['Transport',12000],
+    ['Activities',16000],['Shopping',12000],['Misc',3000],
+  ],
+  Spends:[
+    ["'04-Jul-2026",48784,'Flights','Online','SQ return flights DEL–KUL ×2'],
+  ],
+  Checklist:[
+    ['Book Langkawi flights & hotel','false',"'12-Jul-2026"],
+    ['Book Penang flights & hotel','false',"'12-Jul-2026"],
+    ['Check passport validity 6+ months (both)','false',"'10-Jul-2026"],
+    ['Notify bank + enable intl transactions','false',"'20-Jul-2026"],
+    ['Malaysia Digital Arrival Card (MDAC) — both travelers','false',"'22-Jul-2026"],
+    ["Book Swati's birthday dinner in Langkawi",'false',"'20-Jul-2026"],
+    ['Buy eSIM / tourist SIM plan','false',"'22-Jul-2026"],
+  ],
+  Activities:[],
+};
+
+/* ═══════════════════════════════════════════════════════
+   API LAYER  — fetchTab / appendRow (+ robust cell decoding)
+═══════════════════════════════════════════════════════ */
+async function fetchTab(tab){
+  const r = await fetch(`${API}?tab=${encodeURIComponent(tab)}`, {redirect:'follow'});
+  if(!r.ok) throw new Error(`GET ${tab} → ${r.status}`);
+  const rows = await r.json();
+  if(!Array.isArray(rows)) return [];
+  const head = HEADERS[tab];
+  return rows.filter(row =>
+    Array.isArray(row) &&
+    row.some(c => String(c ?? '').trim() !== '') &&
+    String(row[0]).trim() !== '__test__' &&
+    !(head && String(row[0]).trim().toLowerCase() === head[0].toLowerCase() &&
+      String(row[1] ?? '').trim().toLowerCase() === (head[1]||'').toLowerCase())
+  );
+}
+async function appendRow(tab, row){
+  // text/plain body avoids CORS preflight, which Apps Script can't answer
+  const r = await fetch(API, {method:'POST', body: JSON.stringify({tab, row}), redirect:'follow'});
+  if(!r.ok) throw new Error(`POST ${tab} → ${r.status}`);
+  return true;
+}
+
+/* Sheets auto-converts date-ish strings; decode both raw strings & ISO dates */
+const MONTHS = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+function parseCellDate(v){
+  if(v==null || v==='') return null;
+  const s = String(v).trim();
+  let m = s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/);           // 24-Jul-2026
+  if(m) return new Date(+m[3], MONTHS[m[2].toLowerCase()], +m[1]);
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);                       // 2026-07-24
+  if(m) return new Date(+m[1], +m[2]-1, +m[3]);
+  m = s.match(/^\d{4}-\d{2}-\d{2}T/);                             // ISO from a real Date cell:
+  if(m){                                                          // sheet-midnight → shift 12h, read UTC date
+    const d = new Date(new Date(s).getTime() + 12*3600*1000);
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  }
+  return null;
+}
+function parseCellTime(v){
+  if(v==null || v==='') return null;
+  const s = String(v).trim();
+  let m = s.match(/^(\d{1,2}):(\d{2})/);
+  if(m && !s.includes('T')) return {h:+m[1], m:+m[2]};
+  m = s.match(/^\d{4}-\d{2}-\d{2}T(\d{2}):(\d{2})/);              // ISO (1899-era time cell, UTC)
+  if(m){
+    let mins = (+m[1])*60 + (+m[2]) + SHEET_TZ_OFFSET_MIN;        // shift from UTC to sheet tz
+    mins = ((mins % 1440) + 1440) % 1440;
+    return {h: Math.floor(mins/60), m: mins%60};
+  }
+  return null;
+}
+const fmtTime = t => t ? `${String(t.h).padStart(2,'0')}:${String(t.m).padStart(2,'0')}` : '—';
+const fmtDate = d => d ? d.toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '—';
+const fmtDateFull = d => d ? d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}) : '—';
+const fmtINR = n => '₹' + Math.round(n).toLocaleString('en-IN');
+const toSheetDate = iso => { const d = parseCellDate(iso); return d ? `'${String(d.getDate()).padStart(2,'0')}-${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}-${d.getFullYear()}` : `'${iso}`; };
+const sameDay = (a,b) => a && b && a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const localISO = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : '';
+
+/* ═══════════════════════════════════════════════════════
+   STATE + SYNC
+═══════════════════════════════════════════════════════ */
+const S = {Flights:[],Hotels:[],Itinerary:[],Budget:[],Spends:[],Checklist:[],Activities:[]};
+const sig = {};
+let firstLoadDone = false;
+
+function setSync(state){ const d = document.getElementById('syncdot'); d.className = 'syncdot ' + state; }
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+async function seedIfEmpty(tab, rows){
+  if(rows.length) return rows;
+  const seed = SEEDS[tab];
+  toast(`Setting up ${tab} sheet…`);
+  await appendRow(tab, HEADERS[tab]);
+  for(const r of seed) await appendRow(tab, r);      // sequential keeps order
+  return fetchTab(tab);
+}
+
+async function loadTab(tab, allowSeed){
+  let rows = await fetchTab(tab);
+  if(allowSeed && rows.length === 0 && (SEEDS[tab].length || tab==='Hotels' || tab==='Activities')){
+    if(SEEDS[tab].length || tab==='Hotels' || tab==='Activities'){
+      // Hotels/Activities get just a header row so the sheet is self-describing
+      rows = await seedIfEmpty(tab, rows);
+    }
+  }
+  const s = JSON.stringify(rows);
+  const changed = sig[tab] !== s;
+  sig[tab] = s; S[tab] = rows;
+  return changed;
+}
+
+async function syncAll(seed=false, tabs=Object.keys(HEADERS)){
+  try{
+    setSync('');
+    const results = await Promise.all(tabs.map(t => loadTab(t, seed)));
+    setSync('ok');
+    const changedTabs = tabs.filter((t,i)=>results[i]);
+    if(changedTabs.length) renderAll(changedTabs, firstLoadDone);
+    firstLoadDone = true;
+  }catch(e){
+    console.error(e); setSync('err');
+    if(!firstLoadDone) toast('⚠️ Could not reach the sheet — check connection');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   PARSED MODELS
+═══════════════════════════════════════════════════════ */
+function flights(){
+  return S.Flights.map(r => {
+    const d = parseCellDate(r[0]), dep = parseCellTime(r[3]), arr = parseCellTime(r[4]);
+    let depAt = null;
+    if(d && dep) depAt = new Date(d.getFullYear(), d.getMonth(), d.getDate(), dep.h, dep.m);
+    return {date:d, route:String(r[1]||''), no:String(r[2]||''), dep, arr, pnr:String(r[5]||''), depAt};
+  }).filter(f => f.route).sort((a,b) => (a.depAt||0) - (b.depAt||0));
+}
+function spends(){
+  return S.Spends.map(r => ({date:parseCellDate(r[0]), amount:parseFloat(r[1])||0, cat:String(r[2]||'Misc'), loc:String(r[3]||''), notes:String(r[4]||'')}))
+    .filter(s => s.amount > 0);
+}
+function checklist(){
+  // append-only sheet → last row per task wins (toggle history stays in sheet as audit trail)
+  const map = new Map();
+  S.Checklist.forEach(r => {
+    const task = String(r[0]||'').trim(); if(!task) return;
+    map.set(task.toLowerCase(), {task, done: r[1]===true || String(r[1]).toLowerCase()==='true', due: parseCellDate(r[2])});
+  });
+  return [...map.values()];
+}
+function activities(){
+  return S.Activities.map(r => ({city:String(r[0]||''), name:String(r[1]||''), type:String(r[2]||'Other'), notes:String(r[3]||''), lat:parseFloat(r[4]), lng:parseFloat(r[5])}))
+    .filter(a => a.name);
+}
+function budgetAlloc(){
+  const m = {};
+  S.Budget.forEach(r => { const c = String(r[0]||'').trim(); const v = parseFloat(r[1]); if(c && !isNaN(v)) m[c] = v; });
+  return m;
+}
+
+/* ═══════════════════════════════════════════════════════
+   RENDER — overview / flights
+═══════════════════════════════════════════════════════ */
+function pulse(id){ const el = document.getElementById(id); if(el){ el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); } }
+
+function tickCountdown(){
+  const now = new Date();
+  let target = TRIP_START, sub = 'Countdown to take-off', title = 'Kuala Lumpur · Langkawi · Penang';
+  if(now >= TRIP_START && now <= TRIP_END){
+    const day = Math.floor((now - new Date(2026,6,24)) / 86400000) + 1;
+    sub = `Trip in progress — day ${day} of 10`;
+    const nf = flights().find(f => f.depAt && f.depAt > now);
+    target = nf ? nf.depAt : TRIP_END;
+    title = nf ? `Next: ${nf.route} · ${nf.no}` : 'Enjoy Malaysia! 🌺';
+  } else if(now > TRIP_END){ sub = 'Trip complete'; title = 'Selamat jalan! 🇲🇾'; }
+  document.getElementById('heroSub').textContent = sub;
+  document.getElementById('heroTitle').textContent = title;
+  let ms = Math.max(0, target - now);
+  const d = Math.floor(ms/86400000); ms -= d*86400000;
+  const h = Math.floor(ms/3600000); ms -= h*3600000;
+  const m = Math.floor(ms/60000); const s = Math.floor((ms - m*60000)/1000);
+  cdD.textContent = d; cdH.textContent = h; cdM.textContent = m; cdS.textContent = s;
+}
+
+function nextFlightHTML(f, big){
+  if(!f) return `<div class="empty">No upcoming flights on the sheet ✈️</div>`;
+  const leaveBy = new Date(f.depAt.getTime() - 4*3600000);
+  const hrsAway = (f.depAt - Date.now()) / 3600000;
+  const countTxt = hrsAway > 48 ? `in ${Math.round(hrsAway/24)} days` :
+                   hrsAway > 0  ? `in ${Math.floor(hrsAway)}h ${Math.round((hrsAway%1)*60)}m` : 'boarding soon';
+  return `
+    <div class="frow"><span class="route">${esc(f.route.replace('-',' → '))}</span>
+      <span class="tag teal">${esc(f.no)}</span><span class="grow" style="flex:1"></span>
+      <span class="tag gold">${countTxt}</span></div>
+    <div class="ftimes">
+      <div><b>${fmtTime(f.dep)}</b><br><span class="muted">${fmtDateFull(f.date)}</span></div>
+      <div style="text-align:right"><b>${fmtTime(f.arr)}</b><br><span class="muted">arrival (local)</span></div>
+    </div>
+    ${f.pnr ? `<div class="muted" style="margin-top:6px">PNR: <b>${esc(f.pnr)}</b></div>` : ''}
+    ${big ? `<div class="leaveby">🚕 Leave for the airport by <b>&nbsp;${fmtTime({h:leaveBy.getHours(),m:leaveBy.getMinutes()})}</b>&nbsp; (4 hrs before departure)</div>` : ''}`;
+}
+
+const AIRPORT_CK = ['Passports ×2','Boarding passes (digital + print)','Phone & powerbank charged','Wallet + forex card','MDAC confirmation','House keys handed over / locked'];
+function renderAirportCk(f){
+  const wrap = document.getElementById('airportCkWrap');
+  if(!f){ wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  const key = 'ack-' + f.no + '-' + localISO(f.date);
+  const saved = JSON.parse(localStorage.getItem(key) || '{}');
+  document.getElementById('airportCk').innerHTML = AIRPORT_CK.map((t,i)=>`
+    <label><input type="checkbox" data-k="${key}" data-i="${i}" ${saved[i]?'checked':''}><span>${t}</span></label>`).join('');
+  document.querySelectorAll('#airportCk input').forEach(cb => cb.onchange = () => {
+    const st = JSON.parse(localStorage.getItem(key) || '{}');
+    st[cb.dataset.i] = cb.checked; localStorage.setItem(key, JSON.stringify(st));
+  });
+}
+
+function renderFlights(){
+  const fs = flights(), now = new Date();
+  const next = fs.find(f => f.depAt && f.depAt > now);
+  document.getElementById('nextFlightBox').innerHTML = nextFlightHTML(next, true);
+  document.getElementById('nextFlightBig').innerHTML = nextFlightHTML(next, true);
+  renderAirportCk(next);
+  document.getElementById('flightsList').innerHTML = fs.length ? fs.map(f => `
+    <div class="flightcard ${f.depAt && f.depAt < now ? 'past':''}">
+      <div class="frow"><span class="route" style="font-size:15px">${esc(f.route.replace('-',' → '))}</span>
+        <span class="tag teal">${esc(f.no)}</span><span style="flex:1"></span>
+        <span class="muted">${fmtDateFull(f.date)}</span></div>
+      <div class="muted" style="margin-top:4px">🛫 ${fmtTime(f.dep)} &nbsp;→&nbsp; 🛬 ${fmtTime(f.arr)}${f.pnr ? ` &nbsp;·&nbsp; PNR <b>${esc(f.pnr)}</b>`:''}</div>
+    </div>`).join('') : '<div class="empty">No flights yet</div>';
+}
+
+function renderHotels(){
+  const hs = S.Hotels.map(r => ({city:r[0], name:r[1], cin:parseCellDate(r[2]), cout:parseCellDate(r[3]), addr:r[4], ref:r[5], price:parseFloat(r[6])||0})).filter(h => h.name);
+  document.getElementById('hotelsList').innerHTML = hs.length ? hs.map(h => `
+    <div class="flightcard" style="border-left-color:var(--gold)">
+      <div class="frow"><b>${esc(h.name)}</b><span style="flex:1"></span><span class="tag gold">${esc(h.city)}</span></div>
+      <div class="muted" style="margin-top:4px">${fmtDate(h.cin)} → ${fmtDate(h.cout)}${h.addr?` · ${esc(h.addr)}`:''}${h.ref?` · Ref <b>${esc(h.ref)}</b>`:''}${h.price?` · ${fmtINR(h.price)}`:''}</div>
+    </div>`).join('') : '<div class="empty">No hotels yet — Langkawi (27–30 Jul) & Penang (30 Jul–1 Aug) needed. Due 12 Jul! ⏰</div>';
+}
+
+/* ═══════════════════════════════════════════════════════
+   RENDER — itinerary
+═══════════════════════════════════════════════════════ */
+function renderItinerary(){
+  const items = S.Itinerary.map(r => ({date:parseCellDate(r[0]), city:String(r[1]||''), plan:String(r[2]||'')}))
+    .filter(i => i.date).sort((a,b) => a.date - b.date);
+  const today = new Date();
+  document.getElementById('timeline').innerHTML = items.length ? items.map(i => `
+    <div class="tlitem ${sameDay(i.date,today)?'today':''}" style="--dot:${CITY_DOT[i.city]||'var(--accent)'}">
+      <div class="d">${fmtDateFull(i.date)}</div>
+      <div class="c">${esc(i.city)}</div>
+      <div class="p">${esc(i.plan)}</div>
+    </div>`).join('') : '<div class="empty">Itinerary loading…</div>';
+  // overview "today"
+  const t = items.find(i => sameDay(i.date, today));
+  const card = document.getElementById('ovToday');
+  if(t){ card.style.display = ''; document.getElementById('ovTodayBody').innerHTML =
+    `<b style="font-size:15px">${esc(t.city)}</b><div class="muted" style="margin-top:4px;font-size:13px">${esc(t.plan)}</div>`; }
+  else card.style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════════════════
+   RENDER — budget
+═══════════════════════════════════════════════════════ */
+function renderBudget(){
+  const sp = spends(), alloc = budgetAlloc();
+  const total = Object.values(alloc).reduce((a,b)=>a+b,0) || TOTAL_BUDGET;
+  const spent = sp.reduce((a,s)=>a+s.amount,0);
+  const left = total - spent;
+  const now = new Date();
+  const tripDaysLeft = now < TRIP_START ? 10 : Math.max(1, Math.ceil((TRIP_END - now)/86400000));
+  bSpent.textContent = fmtINR(spent); bLeft.textContent = fmtINR(left);
+  bLeft.style.color = left < 0 ? 'var(--danger)' : '';
+  bPace.textContent = fmtINR(Math.max(0,left)/tripDaysLeft);
+  const pct = Math.min(100, spent/total*100);
+  bBar.style.width = pct + '%';
+  bBar.className = pct > 90 ? 'over' : pct > 70 ? 'warn' : '';
+  bPct.textContent = `${pct.toFixed(1)}% of ${fmtINR(total)} used`;
+
+  // overview snapshot
+  document.getElementById('ovBudget').innerHTML = `
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+      <span class="bignum" style="color:${left<0?'var(--danger)':'var(--accent)'}">${fmtINR(left)}</span>
+      <span class="muted">left of ${fmtINR(total)}</span></div>
+    <div class="bar"><i class="${bBar.className}" style="width:${pct}%"></i></div>`;
+
+  // donut of spends by category
+  const byCat = {};
+  sp.forEach(s => byCat[s.cat] = (byCat[s.cat]||0) + s.amount);
+  const donut = document.getElementById('donut');
+  const entries = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  const sum = entries.reduce((a,e)=>a+e[1],0);
+  let off = 25, segs = '';
+  entries.forEach(([c,v]) => {
+    const frac = v/sum*100;
+    segs += `<circle r="15.9" cx="21" cy="21" fill="none" stroke="${CAT_COLOR[c]||'#999'}" stroke-width="5.5"
+      stroke-dasharray="${Math.max(0,frac-1)} ${100-Math.max(0,frac-1)}" stroke-dashoffset="${off}" stroke-linecap="round"
+      style="transition:stroke-dasharray .8s"></circle>`;
+    off -= frac;
+  });
+  donut.innerHTML = segs + `<text x="21" y="20" text-anchor="middle" font-size="4.5" font-weight="800" fill="var(--text)">${sum ? Math.round(spent/total*100)+'%' : '—'}</text>
+    <text x="21" y="25.5" text-anchor="middle" font-size="2.6" fill="var(--text2)">of budget</text>`;
+  document.getElementById('donutLegend').innerHTML = entries.map(([c,v]) =>
+    `<div><i style="background:${CAT_COLOR[c]||'#999'}"></i>${CAT_ICON[c]||''} ${esc(c)} — <b>${fmtINR(v)}</b></div>`).join('') || '<div class="muted">No spends yet</div>';
+
+  // category bars
+  document.getElementById('catBars').innerHTML = CATS.map(c => {
+    const a = alloc[c] ?? 0, v = byCat[c] || 0, p = a ? Math.min(100, v/a*100) : (v?100:0);
+    return `<div class="catrow"><div class="t"><span>${CAT_ICON[c]} ${c}</span><span>${fmtINR(v)} / ${fmtINR(a)}</span></div>
+      <div class="bar"><i class="${p>=100?'over':p>75?'warn':''}" style="width:${p}%;background:${p>=100?'var(--danger)':CAT_COLOR[c]}"></i></div></div>`;
+  }).join('');
+
+  // recent spends
+  const recent = [...sp].sort((a,b)=>(b.date||0)-(a.date||0)).slice(0,12);
+  document.getElementById('spendsList').innerHTML = recent.length ? recent.map(s => `
+    <div class="spenditem"><div class="ic">${CAT_ICON[s.cat]||'💸'}</div>
+      <div class="mid"><b>${esc(s.notes || s.cat)}</b><span>${fmtDate(s.date)}${s.loc?` · ${esc(s.loc)}`:''}</span></div>
+      <div class="amt">${fmtINR(s.amount)}</div></div>`).join('') : '<div class="empty">No spends logged yet</div>';
+
+  // shopping haul (auto from Spends)
+  const shop = sp.filter(s => s.cat === 'Shopping').sort((a,b)=>(b.date||0)-(a.date||0));
+  const shopSum = shop.reduce((a,s)=>a+s.amount,0);
+  document.getElementById('shopTotal').textContent = fmtINR(shopSum) + (alloc.Shopping ? ` / ${fmtINR(alloc.Shopping)}` : '');
+  document.getElementById('shoppingList').innerHTML = shop.length ? shop.map(s => `
+    <div class="spenditem"><div class="ic">🛍️</div>
+      <div class="mid"><b>${esc(s.notes || 'Shopping')}</b><span>${fmtDate(s.date)}${s.loc?` · ${esc(s.loc)}`:''}</span></div>
+      <div class="amt">${fmtINR(s.amount)}</div></div>`).join('')
+    : '<div class="empty">Nothing bought yet — Langkawi duty-free awaits 🛒</div>';
+}
+
+/* ═══════════════════════════════════════════════════════
+   RENDER — checklist
+═══════════════════════════════════════════════════════ */
+function renderChecklist(){
+  const items = checklist();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const groups = new Map();
+  items.sort((a,b) => (a.due?a.due:new Date(9999,0)) - (b.due?b.due:new Date(9999,0)));
+  items.forEach(i => {
+    const overdue = i.due && i.due < today && !i.done;
+    const k = overdue ? '⚠️ Overdue' : i.due ? 'Due ' + fmtDateFull(i.due) : 'No due date';
+    if(!groups.has(k)) groups.set(k, []);
+    groups.get(k).push({...i, overdue});
+  });
+  // overdue group first
+  const keys = [...groups.keys()].sort((a,b) => (a.startsWith('⚠️')?-1:0) - (b.startsWith('⚠️')?-1:0));
+  document.getElementById('checklist').innerHTML = keys.map(k => `
+    <div class="grouphead ${k.startsWith('⚠️')?'red':''}">${k}</div>` +
+    groups.get(k).map(i => `
+      <label class="ck ${i.done?'done':''} ${i.overdue?'overdue':''}">
+        <input type="checkbox" ${i.done?'checked':''} data-task="${esc(i.task)}" data-due="${localISO(i.due)}">
+        <span class="t">${esc(i.task)}${i.due?`<span class="due">due ${fmtDateFull(i.due)}</span>`:''}</span>
+      </label>`).join('')).join('') || '<div class="empty">All clear ✨</div>';
+
+  document.querySelectorAll('#checklist input').forEach(cb => cb.onchange = async () => {
+    const task = cb.dataset.task, due = cb.dataset.due;
+    cb.closest('.ck').classList.toggle('done', cb.checked);
+    try{
+      await appendRow('Checklist', [task, cb.checked ? 'true':'false', due ? toSheetDate(due) : '']);
+      toast(cb.checked ? '✅ Done — synced' : '↩️ Reopened — synced');
+      syncAll(false, ['Checklist']);
+    }catch(e){ toast('⚠️ Sync failed'); cb.checked = !cb.checked; }
+  });
+
+  // overview: overdue + next 3
+  const urgent = items.filter(i => !i.done).slice(0,4);
+  document.getElementById('ovChecklist').innerHTML = urgent.length ? urgent.map(i => {
+    const od = i.due && i.due < today;
+    return `<div class="spenditem"><div class="ic">${od?'🔴':'⏳'}</div>
+      <div class="mid"><b ${od?'style="color:var(--danger)"':''}>${esc(i.task)}</b><span>${i.due?'due '+fmtDateFull(i.due):''}</span></div></div>`;
+  }).join('') : '<div class="empty">Everything ticked off 🎉</div>';
+}
+
+/* ═══════════════════════════════════════════════════════
+   RENDER — activities + map
+═══════════════════════════════════════════════════════ */
+let map, markers = [], curCity = 'Kuala Lumpur', mapInit = false;
+const TYPE_ICON = {Sight:'🏛️',Food:'🍜',Beach:'🏖️',Adventure:'🪂',Shopping:'🛍️',Nature:'🌿',Other:'📌'};
+const CITY_TIPS = {
+ 'Kuala Lumpur':`<h2>💡 KL — dos & don'ts</h2><div class="dodont">
+   <div class="do"><b>✓ Do</b><ul><li>Petronas Towers at night (photo from KLCC park lake)</li><li>Batu Caves before 9:30am — beat heat & crowds</li><li>Jalan Alor night food street; Nasi Kandar at any mamak</li><li>Use Grab everywhere — cheap & honest pricing</li><li>Ask Rishabh & Tarushi for their local haunts — resident intel beats any list</li></ul></div>
+   <div class="dont"><b>✗ Don't</b><ul><li>Don't hail street taxis (meter "broken" scams)</li><li>Don't plan travel 5–7:30pm — traffic is brutal</li><li>Don't wear shorts to mosques/temples (robes available at Masjid Negara)</li><li>Don't drink tap water</li></ul></div></div>`,
+ 'Langkawi':`<h2>💡 Langkawi — dos & don'ts</h2><div class="dodont">
+   <div class="do"><b>✓ Do</b><ul><li>SkyCab + SkyBridge — book online, go at opening (10am) for clear views</li><li>Island-hopping boat AM (Dayang Bunting lake, eagle watching) ~RM40–60</li><li>Kilim mangrove tour — worth it</li><li>Rent a car/scooter — island is spread out, fuel is cheap</li><li>Duty-free: chocolates, perfume, spirits (save for last day)</li></ul></div>
+   <div class="dont"><b>✗ Don't</b><ul><li>Don't swim at dusk — jellyfish season varies, heed flags</li><li>Don't leave food visible — monkeys are professional thieves</li><li>Don't rely on Grab — sparse on the island; agree taxi fares upfront</li></ul></div></div>`,
+ 'Penang':`<h2>💡 Penang — dos & don'ts</h2><div class="dodont">
+   <div class="do"><b>✓ Do</b><ul><li>George Town street-art hunt before 10am (heat + crowds)</li><li>Eat: char kway teow (Siam Rd), assam laksa (Air Itam), cendol (Penang Rd)</li><li>Penang Hill funicular early, then Kek Lok Si temple (both in Air Itam)</li><li>Clan jetties at sunset</li></ul></div>
+   <div class="dont"><b>✗ Don't</b><ul><li>Don't plan outdoor walks 12–3pm — brutal heat</li><li>Don't eat at empty hawker stalls — locals queue where it's good</li><li>Don't skip Chulia St at night</li></ul></div></div>`,
+};
+
+function initMap(){
+  if(mapInit) return; mapInit = true;
+  map = L.map('map', {scrollWheelZoom:false}).setView(CITY_CENTER[curCity], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap'}).addTo(map);
+  map.on('click', e => {
+    const f = document.getElementById('actForm');
+    f.lat.value = e.latlng.lat.toFixed(5); f.lng.value = e.latlng.lng.toFixed(5);
+    f.closest('details').open = true;
+    toast('📌 Pin coordinates filled in the form');
+  });
+}
+function renderActivities(){
+  document.getElementById('actCityName').textContent = curCity;
+  document.getElementById('cityTips').innerHTML = CITY_TIPS[curCity] || '';
+  const acts = activities().filter(a => a.city === curCity);
+  document.getElementById('actList').innerHTML = acts.length ? acts.map(a => `
+    <div class="actcard"><b>${TYPE_ICON[a.type]||'📌'} ${esc(a.name)}</b> <span class="tag teal">${esc(a.type)}</span>
+      ${a.notes?`<div class="n">${esc(a.notes)}</div>`:''}</div>`).join('')
+    : '<div class="empty">No spots saved for ' + esc(curCity) + ' yet — tap the map or add below.</div>';
+  if(!mapInit) return;
+  markers.forEach(m => map.removeLayer(m)); markers = [];
+  acts.filter(a => !isNaN(a.lat) && !isNaN(a.lng)).forEach(a => {
+    const m = L.marker([a.lat, a.lng]).addTo(map).bindPopup(`<b>${esc(a.name)}</b><br>${esc(a.type)}${a.notes?'<br>'+esc(a.notes):''}`);
+    markers.push(m);
+  });
+  map.setView(CITY_CENTER[curCity], curCity==='Kuala Lumpur' ? 11 : 10);
+}
+document.getElementById('cityTabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#cityTabs button').forEach(x => x.classList.toggle('active', x===b));
+  curCity = b.dataset.city;
+  document.querySelector('#actForm [name=city]').value = curCity;
+  renderActivities();
+});
+
+/* ═══════════════════════════════════════════════════════
+   CURRENCY
+═══════════════════════════════════════════════════════ */
+let rates = null; // {MYR:..,USD:..,SGD:..,INR:1} relative to INR
+async function loadRates(){
+  const cached = JSON.parse(localStorage.getItem('fxrates') || 'null');
+  if(cached && Date.now() - cached.at < 6*3600000){ rates = cached.r; renderFX(cached.at); return; }
+  try{
+    const r = await fetch('https://open.er-api.com/v6/latest/INR').then(x => x.json());
+    if(r && r.rates){
+      rates = {INR:1, MYR:r.rates.MYR, USD:r.rates.USD, SGD:r.rates.SGD};
+      localStorage.setItem('fxrates', JSON.stringify({at:Date.now(), r:rates}));
+      renderFX(Date.now());
+    }
+  }catch(e){
+    if(cached){ rates = cached.r; renderFX(cached.at); }
+    else { rates = {INR:1, MYR:0.0505, USD:0.0116, SGD:0.0155}; renderFX(null); } // fallback approx
+  }
+}
+function convert(amt, from, to){ return amt / rates[from] * rates[to]; }
+function renderFX(at){
+  document.getElementById('rateAge').textContent = at ? 'rates: ' + new Date(at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : 'offline est.';
+  const inrPerMyr = 1/rates.MYR;
+  document.getElementById('essRate').textContent = inrPerMyr.toFixed(1);
+  document.getElementById('cheat').innerHTML =
+    [1,5,10,50,100,500].map(rm => `<div><b>RM ${rm}</b>₹${Math.round(rm*inrPerMyr).toLocaleString('en-IN')}</div>`).join('') +
+    `<div><b>Teh tarik</b>~RM 2.50</div><div><b>Hawker meal</b>~RM 10</div><div><b>Grab 5km</b>~RM 12</div><div><b>SkyCab</b>RM 85</div>`;
+  doConvert();
+}
+function doConvert(){
+  if(!rates) return;
+  const amt = parseFloat(document.getElementById('cvAmt').value) || 0;
+  const from = document.getElementById('cvFrom').value, to = document.getElementById('cvTo').value;
+  const out = convert(amt, from, to);
+  document.getElementById('cvOut').textContent =
+    (to==='INR'?'₹':to==='MYR'?'RM ':to+' ') + out.toLocaleString('en-IN',{maximumFractionDigits:2});
+}
+['cvAmt','cvFrom','cvTo'].forEach(id => document.getElementById(id).addEventListener('input', doConvert));
+document.getElementById('cvSwap').onclick = () => {
+  const f = document.getElementById('cvFrom'), t = document.getElementById('cvTo');
+  [f.value, t.value] = [t.value, f.value]; doConvert();
+};
+
+/* ═══════════════════════════════════════════════════════
+   FORMS
+═══════════════════════════════════════════════════════ */
+async function handleForm(form, buildRow, tab, okMsg, after){
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = form.querySelector('button[type=submit]');
+    btn.disabled = true; const old = btn.textContent; btn.textContent = 'Saving…';
+    try{
+      await appendRow(tab, buildRow(new FormData(form)));
+      toast(okMsg); form.reset(); if(after) after();
+      await syncAll(false, [tab]);
+    }catch(err){ toast('⚠️ Failed to save — try again'); }
+    btn.disabled = false; btn.textContent = old;
+  });
+}
+handleForm(document.getElementById('spendForm'), fd => [
+  toSheetDate(fd.get('date')), parseFloat(fd.get('amount')), fd.get('category'), fd.get('location'), fd.get('notes')
+], 'Spends', '💸 Spend logged!', () => { spendForm.date.value = todayISO(); });
+handleForm(document.getElementById('flightForm'), fd => [
+  toSheetDate(fd.get('date')), fd.get('route').toUpperCase(), fd.get('fno').toUpperCase(), `'${fd.get('dep')}`, `'${fd.get('arr')}`, fd.get('pnr').toUpperCase()
+], 'Flights', '✈️ Flight added!');
+handleForm(document.getElementById('hotelForm'), fd => [
+  fd.get('city'), fd.get('name'), toSheetDate(fd.get('cin')), toSheetDate(fd.get('cout')), fd.get('addr'), fd.get('ref'), fd.get('price')||''
+], 'Hotels', '🏨 Hotel saved!');
+handleForm(document.getElementById('taskForm'), fd => [
+  fd.get('task'), 'false', fd.get('due') ? toSheetDate(fd.get('due')) : ''
+], 'Checklist', '✅ Task added!');
+handleForm(document.getElementById('actForm'), fd => [
+  fd.get('city'), fd.get('name'), fd.get('type'), fd.get('notes'), fd.get('lat')||'', fd.get('lng')||''
+], 'Activities', '🎯 Activity saved!', () => { actForm.city.value = curCity; });
+
+const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+spendForm.date.value = todayISO();
+
+// geolocation prefill for spend location
+document.getElementById('geoBtn').onclick = () => {
+  if(!navigator.geolocation) return toast('Location not available');
+  toast('📍 Locating…');
+  navigator.geolocation.getCurrentPosition(async pos => {
+    try{
+      const {latitude:la, longitude:lo} = pos.coords;
+      const j = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${la}&lon=${lo}&zoom=14`).then(r => r.json());
+      const a = j.address || {};
+      spendForm.location.value = a.suburb || a.town || a.village || a.city_district || a.city || j.name || `${la.toFixed(3)},${lo.toFixed(3)}`;
+      toast('📍 Location filled');
+    }catch(e){ toast('Could not resolve place name'); }
+  }, () => toast('Location permission denied'), {timeout:8000});
+};
+
+/* ═══════════════════════════════════════════════════════
+   NAV + THEME + BOOT
+═══════════════════════════════════════════════════════ */
+function go(view){
+  document.querySelectorAll('section.view').forEach(s => s.classList.toggle('active', s.id === 'view-'+view));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.v === view));
+  window.scrollTo({top:0});
+  if(view === 'activities'){ initMap(); setTimeout(()=>{ map.invalidateSize(); renderActivities(); }, 60); }
+}
+document.getElementById('nav').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(b) go(b.dataset.v);
+});
+document.getElementById('fab').onclick = () => {
+  go('budget');
+  setTimeout(() => document.getElementById('logSpendCard').scrollIntoView({behavior:'smooth', block:'center'}), 80);
+  setTimeout(() => spendForm.amount.focus(), 450);
+};
+
+const themeBtn = document.getElementById('themeBtn');
+function setTheme(t){
+  document.documentElement.dataset.theme = t;
+  themeBtn.textContent = t === 'dark' ? '☀️' : '🌙';
+  localStorage.setItem('theme', t);
+}
+setTheme(localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+themeBtn.onclick = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+document.getElementById('refreshBtn').onclick = () => { toast('Refreshing…'); syncAll(); };
+
+function renderAll(tabs, animate){
+  if(tabs.includes('Flights')) { renderFlights(); if(animate) pulse('ovFlight'); }
+  if(tabs.includes('Hotels')) renderHotels();
+  if(tabs.includes('Itinerary')) renderItinerary();
+  if(tabs.includes('Budget') || tabs.includes('Spends')) renderBudget();
+  if(tabs.includes('Checklist')) renderChecklist();
+  if(tabs.includes('Activities')) renderActivities();
+}
+
+setInterval(tickCountdown, 1000); tickCountdown();
+loadRates(); setInterval(loadRates, 30*60000);
+
+(async () => {
+  await syncAll(true);                                     // first load: seed empty tabs
+  setInterval(() => syncAll(false, ['Spends','Checklist','Activities']), POLL_FAST);
+  setInterval(() => syncAll(false, ['Flights','Hotels','Itinerary','Budget']), POLL_SLOW);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) syncAll(); });
+})();
+</script>
+</body>
+</html>
