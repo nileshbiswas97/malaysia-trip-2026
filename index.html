@@ -320,6 +320,21 @@ details.addbox form{margin-top:12px}
   </div>
 
   <div class="card">
+    <h2>📂 Documents</h2>
+    <a class="btn" href="https://drive.google.com/drive/folders/1-CoEHfQbJSin_Fxpq4Jo1UDtiD90fBlI" target="_blank" rel="noopener" style="text-decoration:none;width:100%;justify-content:center">📂 Open trip folder in Drive</a>
+    <div id="docsList" style="margin-top:10px"></div>
+    <details class="addbox" id="docsAdd" style="display:none"><summary>Add a document link</summary>
+      <form id="docForm">
+        <div class="fgrid">
+          <div class="full"><label class="f">Name</label><input name="name" required placeholder="Langkawi hotel booking"></div>
+          <div class="full"><label class="f">Link (Drive share link)</label><input name="url" type="url" required placeholder="https://drive.google.com/…"></div>
+          <div class="full"><button class="btn" type="submit">📎 Save link</button></div>
+        </div>
+      </form>
+    </details>
+  </div>
+
+  <div class="card">
     <h2>🆘 Essentials</h2>
     <div class="muted" style="line-height:1.8;font-size:13px">
       🚨 Malaysia emergency: <b>999</b> &nbsp;·&nbsp; Tourist Police: <b>03-2115 9999</b><br>
@@ -624,7 +639,10 @@ const HEADERS = {
   Checklist:['Task','Done','DueDate'],
   Activities:['City','Name','Type','Notes','Lat','Lng'],
   Wallet:['Date','Type','FromCur','FromAmt','ToCur','ToAmt','Notes'],
+  Docs:['Name','URL'],
 };
+const OPTIONAL_TABS = ['Wallet','Docs'];   // may not exist in the sheet yet — degrade gracefully
+const DRIVE_FOLDER = 'https://drive.google.com/drive/folders/1-CoEHfQbJSin_Fxpq4Jo1UDtiD90fBlI';
 
 const SEEDS = {
   Flights:[
@@ -666,6 +684,7 @@ const SEEDS = {
   Wallet:[
     ["'04-Jul-2026",'Load','','','USD',500,'Cash carried from India'],
   ],
+  Docs:[],
 };
 
 /* ═══════════════════════════════════════════════════════
@@ -733,7 +752,7 @@ const localISO = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(
 /* ═══════════════════════════════════════════════════════
    STATE + SYNC
 ═══════════════════════════════════════════════════════ */
-const S = {Flights:[],Hotels:[],Itinerary:[],Budget:[],Spends:[],Checklist:[],Activities:[],Wallet:null}; // Wallet null = sheet tab not created yet
+const S = {Flights:[],Hotels:[],Itinerary:[],Budget:[],Spends:[],Checklist:[],Activities:[]}; // Wallet/Docs start undefined; null = confirmed missing in the sheet
 const sig = {};
 let firstLoadDone = false;
 
@@ -756,8 +775,8 @@ async function seedIfEmpty(tab, rows){
 
 async function loadTab(tab, allowSeed){
   let rows = await fetchTab(tab);
-  // Wallet may be created in the sheet at any time → always seed it when found empty
-  if((allowSeed || tab === 'Wallet') && rows.length === 0){
+  // optional tabs may be created in the sheet at any time → always seed them when found empty
+  if((allowSeed || OPTIONAL_TABS.includes(tab)) && rows.length === 0){
     rows = await seedIfEmpty(tab, rows);   // header row (+ seed data) so the sheet is self-describing
   }
   const s = JSON.stringify(rows);
@@ -772,8 +791,8 @@ async function syncAll(seed=false, tabs=Object.keys(HEADERS)){
     const results = await Promise.all(tabs.map(async t => {
       try{ return await loadTab(t, seed); }
       catch(e){
-        if(t === 'Wallet'){ // tab not created in the sheet yet — degrade gracefully
-          const changed = S.Wallet !== null; S.Wallet = null; sig.Wallet = 'missing'; return changed;
+        if(OPTIONAL_TABS.includes(t)){ // tab not created in the sheet yet — degrade gracefully
+          const changed = S[t] !== null; S[t] = null; sig[t] = 'missing'; return changed;
         }
         if(!firstLoadDone) throw e;
         return false;
@@ -1033,6 +1052,36 @@ function renderBudget(){
 }
 
 /* ═══════════════════════════════════════════════════════
+   RENDER — documents
+═══════════════════════════════════════════════════════ */
+function docIcon(name){
+  const n = name.toLowerCase();
+  if(/flight|ticket|boarding|pnr/.test(n)) return '✈️';
+  if(/hotel|booking|stay/.test(n)) return '🏨';
+  if(/passport/.test(n)) return '🛂';
+  if(/mdac|visa|arrival|immigration/.test(n)) return '🧾';
+  if(/insurance/.test(n)) return '🛡️';
+  return '📄';
+}
+function renderDocs(){
+  const list = document.getElementById('docsList'), add = document.getElementById('docsAdd');
+  if(!S.Docs){
+    add.style.display = 'none';
+    list.innerHTML = '<div class="muted" style="margin-top:2px">Optional: add a tab named <b>Docs</b> in the Google Sheet to pin individual file links here (tickets, bookings) that sync to both phones.</div>';
+    return;
+  }
+  add.style.display = '';
+  const docs = S.Docs.map(r => ({name:String(r[0]||''), url:String(r[1]||'')}))
+    .filter(d => d.name && /^https?:\/\//i.test(d.url));
+  list.innerHTML = docs.length ? docs.map(d => `
+    <a class="spenditem" href="${esc(d.url)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
+      <div class="ic">${docIcon(d.name)}</div>
+      <div class="mid"><b>${esc(d.name)}</b><span>${esc(d.url.replace(/^https?:\/\//,'').slice(0,48))}…</span></div>
+      <div class="amt" style="color:var(--accent)">↗</div>
+    </a>`).join('') : '<div class="empty">No file links pinned yet — add your first booking below 📎</div>';
+}
+
+/* ═══════════════════════════════════════════════════════
    RENDER — checklist
 ═══════════════════════════════════════════════════════ */
 function renderChecklist(){
@@ -1204,6 +1253,9 @@ handleForm(document.getElementById('hotelForm'), fd => [
 handleForm(document.getElementById('taskForm'), fd => [
   fd.get('task'), 'false', fd.get('due') ? toSheetDate(fd.get('due')) : ''
 ], 'Checklist', '✅ Task added!');
+handleForm(document.getElementById('docForm'), fd => [
+  fd.get('name'), fd.get('url')
+], 'Docs', '📎 Link saved!');
 handleForm(document.getElementById('actForm'), fd => [
   fd.get('city'), fd.get('name'), fd.get('type'), fd.get('notes'), fd.get('lat')||'', fd.get('lng')||''
 ], 'Activities', '🎯 Activity saved!', () => { actForm.city.value = curCity; });
@@ -1283,6 +1335,7 @@ function renderAll(tabs, animate){
   if(tabs.includes('Budget') || tabs.includes('Spends') || tabs.includes('Wallet')) renderBudget();
   if(tabs.includes('Checklist')) renderChecklist();
   if(tabs.includes('Activities')) renderActivities();
+  if(tabs.includes('Docs')) renderDocs();
 }
 
 setInterval(tickCountdown, 1000); tickCountdown();
@@ -1291,7 +1344,7 @@ loadRates(); setInterval(loadRates, 30*60000);
 (async () => {
   await syncAll(true);                                     // first load: seed empty tabs
   setInterval(() => syncAll(false, ['Spends','Checklist','Activities','Wallet']), POLL_FAST);
-  setInterval(() => syncAll(false, ['Flights','Hotels','Itinerary','Budget']), POLL_SLOW);
+  setInterval(() => syncAll(false, ['Flights','Hotels','Itinerary','Budget','Docs']), POLL_SLOW);
   document.addEventListener('visibilitychange', () => { if(!document.hidden) syncAll(); });
 })();
 </script>
