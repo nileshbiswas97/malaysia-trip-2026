@@ -322,16 +322,7 @@ details.addbox form{margin-top:12px}
   <div class="card">
     <h2>📂 Documents</h2>
     <a class="btn" href="https://drive.google.com/drive/folders/1-CoEHfQbJSin_Fxpq4Jo1UDtiD90fBlI" target="_blank" rel="noopener" style="text-decoration:none;width:100%;justify-content:center">📂 Open trip folder in Drive</a>
-    <div id="docsList" style="margin-top:10px"></div>
-    <details class="addbox" id="docsAdd" style="display:none"><summary>Add a document link</summary>
-      <form id="docForm">
-        <div class="fgrid">
-          <div class="full"><label class="f">Name</label><input name="name" required placeholder="Langkawi hotel booking"></div>
-          <div class="full"><label class="f">Link (Drive share link)</label><input name="url" type="url" required placeholder="https://drive.google.com/…"></div>
-          <div class="full"><button class="btn" type="submit">📎 Save link</button></div>
-        </div>
-      </form>
-    </details>
+    <div class="muted" style="margin-top:9px">Tickets, bookings, passport scans, MDAC confirmations — keep them all in this one folder. Tip: in the Drive app, ⭐ star key files or tap ⋮ → "Make available offline" so they open without network at counters.</div>
   </div>
 
   <div class="card">
@@ -639,10 +630,8 @@ const HEADERS = {
   Checklist:['Task','Done','DueDate'],
   Activities:['City','Name','Type','Notes','Lat','Lng'],
   Wallet:['Date','Type','FromCur','FromAmt','ToCur','ToAmt','Notes'],
-  Docs:['Name','URL'],
 };
-const OPTIONAL_TABS = ['Wallet','Docs'];   // may not exist in the sheet yet — degrade gracefully
-const DRIVE_FOLDER = 'https://drive.google.com/drive/folders/1-CoEHfQbJSin_Fxpq4Jo1UDtiD90fBlI';
+const OPTIONAL_TABS = ['Wallet'];   // may not exist in the sheet yet — degrade gracefully
 
 const SEEDS = {
   Flights:[
@@ -684,7 +673,6 @@ const SEEDS = {
   Wallet:[
     ["'04-Jul-2026",'Load','','','USD',500,'Cash carried from India'],
   ],
-  Docs:[],
 };
 
 /* ═══════════════════════════════════════════════════════
@@ -804,7 +792,10 @@ async function syncAll(seed=false, tabs=Object.keys(HEADERS)){
     firstLoadDone = true;
   }catch(e){
     console.error(e); setSync('err');
-    if(!firstLoadDone) toast('⚠️ Could not reach the sheet — check connection');
+    if(!firstLoadDone){
+      toast('⚠️ Could not reach the sheet — retrying…');
+      setTimeout(() => syncAll(seed, tabs), 6000);   // keep retrying until the first load succeeds
+    }
   }
 }
 
@@ -1052,36 +1043,6 @@ function renderBudget(){
 }
 
 /* ═══════════════════════════════════════════════════════
-   RENDER — documents
-═══════════════════════════════════════════════════════ */
-function docIcon(name){
-  const n = name.toLowerCase();
-  if(/flight|ticket|boarding|pnr/.test(n)) return '✈️';
-  if(/hotel|booking|stay/.test(n)) return '🏨';
-  if(/passport/.test(n)) return '🛂';
-  if(/mdac|visa|arrival|immigration/.test(n)) return '🧾';
-  if(/insurance/.test(n)) return '🛡️';
-  return '📄';
-}
-function renderDocs(){
-  const list = document.getElementById('docsList'), add = document.getElementById('docsAdd');
-  if(!S.Docs){
-    add.style.display = 'none';
-    list.innerHTML = '<div class="muted" style="margin-top:2px">Optional: add a tab named <b>Docs</b> in the Google Sheet to pin individual file links here (tickets, bookings) that sync to both phones.</div>';
-    return;
-  }
-  add.style.display = '';
-  const docs = S.Docs.map(r => ({name:String(r[0]||''), url:String(r[1]||'')}))
-    .filter(d => d.name && /^https?:\/\//i.test(d.url));
-  list.innerHTML = docs.length ? docs.map(d => `
-    <a class="spenditem" href="${esc(d.url)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
-      <div class="ic">${docIcon(d.name)}</div>
-      <div class="mid"><b>${esc(d.name)}</b><span>${esc(d.url.replace(/^https?:\/\//,'').slice(0,48))}…</span></div>
-      <div class="amt" style="color:var(--accent)">↗</div>
-    </a>`).join('') : '<div class="empty">No file links pinned yet — add your first booking below 📎</div>';
-}
-
-/* ═══════════════════════════════════════════════════════
    RENDER — checklist
 ═══════════════════════════════════════════════════════ */
 function renderChecklist(){
@@ -1253,9 +1214,6 @@ handleForm(document.getElementById('hotelForm'), fd => [
 handleForm(document.getElementById('taskForm'), fd => [
   fd.get('task'), 'false', fd.get('due') ? toSheetDate(fd.get('due')) : ''
 ], 'Checklist', '✅ Task added!');
-handleForm(document.getElementById('docForm'), fd => [
-  fd.get('name'), fd.get('url')
-], 'Docs', '📎 Link saved!');
 handleForm(document.getElementById('actForm'), fd => [
   fd.get('city'), fd.get('name'), fd.get('type'), fd.get('notes'), fd.get('lat')||'', fd.get('lng')||''
 ], 'Activities', '🎯 Activity saved!', () => { actForm.city.value = curCity; });
@@ -1335,7 +1293,6 @@ function renderAll(tabs, animate){
   if(tabs.includes('Budget') || tabs.includes('Spends') || tabs.includes('Wallet')) renderBudget();
   if(tabs.includes('Checklist')) renderChecklist();
   if(tabs.includes('Activities')) renderActivities();
-  if(tabs.includes('Docs')) renderDocs();
 }
 
 setInterval(tickCountdown, 1000); tickCountdown();
@@ -1344,7 +1301,7 @@ loadRates(); setInterval(loadRates, 30*60000);
 (async () => {
   await syncAll(true);                                     // first load: seed empty tabs
   setInterval(() => syncAll(false, ['Spends','Checklist','Activities','Wallet']), POLL_FAST);
-  setInterval(() => syncAll(false, ['Flights','Hotels','Itinerary','Budget','Docs']), POLL_SLOW);
+  setInterval(() => syncAll(false, ['Flights','Hotels','Itinerary','Budget']), POLL_SLOW);
   document.addEventListener('visibilitychange', () => { if(!document.hidden) syncAll(); });
 })();
 </script>
