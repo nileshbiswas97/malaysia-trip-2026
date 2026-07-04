@@ -438,17 +438,40 @@ details.addbox form{margin-top:12px}
     <div class="tip">💡 Food in Malaysia is gloriously cheap if you eat like a local — hawker meals RM8–15 (₹160–300). The budget-killers are usually <b>activities</b> (SkyCab, island hopping, cable cars add up) and <b>duty-free shopping in Langkawi</b>. Log spends same-day or you'll forget the small ones.</div>
   </div>
 
+  <div class="card" id="walletCard">
+    <h2>💵 Cash & card wallet</h2>
+    <div id="walletBody"><div class="skel"></div></div>
+    <details class="addbox" id="convBox"><summary>Log a currency exchange</summary>
+      <form id="convForm">
+        <div class="fgrid">
+          <div><label class="f">Gave amount</label><input name="fromAmt" type="number" step="any" min="0.01" required placeholder="100" inputmode="decimal"></div>
+          <div><label class="f">Currency</label><select name="fromCur"><option>USD</option><option>INR</option></select></div>
+          <div><label class="f">Got RM</label><input name="toAmt" type="number" step="any" min="0.01" required placeholder="465" inputmode="decimal"></div>
+          <div><label class="f">Where</label><input name="notes" placeholder="Changer at Mid Valley"></div>
+          <div class="full muted" id="convHint"></div>
+          <div class="full"><button class="btn" type="submit">💱 Log exchange</button></div>
+        </div>
+      </form>
+    </details>
+    <div class="tip">💡 Skip airport counters — KL city money changers (Mid Valley, KLCC concourse) give near-mid-market USD→MYR. Your <b>Scapia card has zero forex markup</b>, so card-first everywhere it's accepted; keep cash for hawkers, taxis & small islands. On card machines always pay in <b>MYR, never INR</b> (that "helpful" conversion costs 5–8%).</div>
+  </div>
+
   <div class="card" id="logSpendCard">
     <h2>📝 Log a spend</h2>
     <form id="spendForm">
       <div class="fgrid">
-        <div><label class="f">Amount (₹)</label><input name="amount" type="number" step="0.01" min="0" required placeholder="500" inputmode="decimal"></div>
+        <div><label class="f">Amount</label>
+          <div style="display:flex;gap:6px"><input name="amount" type="number" step="0.01" min="0" required placeholder="45" inputmode="decimal"><select name="cur" style="width:80px;flex:none;font-weight:700"><option>INR</option><option>MYR</option><option>USD</option></select></div>
+          <div class="muted" id="inrHint" style="margin-top:4px"></div></div>
         <div><label class="f">Category</label><select name="category">
           <option>Food</option><option>Transport</option><option>Activities</option>
           <option>Shopping</option><option>Accommodation</option><option>Flights</option><option>Misc</option>
         </select></div>
+        <div><label class="f">Paid with</label><select name="mode">
+          <option>Scapia card</option><option>MYR cash</option><option>USD cash</option><option>UPI / Other</option>
+        </select></div>
         <div><label class="f">Date</label><input name="date" type="date" required></div>
-        <div><label class="f">Location <button type="button" class="btn small ghost" id="geoBtn" style="padding:2px 8px;font-size:10.5px">📍 detect</button></label><input name="location" placeholder="Pantai Cenang"></div>
+        <div class="full"><label class="f">Location <button type="button" class="btn small ghost" id="geoBtn" style="padding:2px 8px;font-size:10.5px">📍 detect</button></label><input name="location" placeholder="Pantai Cenang"></div>
         <div class="full"><label class="f">Notes</label><input name="notes" placeholder="Beach dinner for 2"></div>
         <div class="full"><button class="btn coral" type="submit">💸 Log spend</button></div>
       </div>
@@ -600,6 +623,7 @@ const HEADERS = {
   Spends:['Date','Amount','Category','Location','Notes'],
   Checklist:['Task','Done','DueDate'],
   Activities:['City','Name','Type','Notes','Lat','Lng'],
+  Wallet:['Date','Type','FromCur','FromAmt','ToCur','ToAmt','Notes'],
 };
 
 const SEEDS = {
@@ -639,6 +663,9 @@ const SEEDS = {
     ['Buy eSIM / tourist SIM plan','false',"'22-Jul-2026"],
   ],
   Activities:[],
+  Wallet:[
+    ["'04-Jul-2026",'Load','','','USD',500,'Cash carried from India'],
+  ],
 };
 
 /* ═══════════════════════════════════════════════════════
@@ -706,7 +733,7 @@ const localISO = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(
 /* ═══════════════════════════════════════════════════════
    STATE + SYNC
 ═══════════════════════════════════════════════════════ */
-const S = {Flights:[],Hotels:[],Itinerary:[],Budget:[],Spends:[],Checklist:[],Activities:[]};
+const S = {Flights:[],Hotels:[],Itinerary:[],Budget:[],Spends:[],Checklist:[],Activities:[],Wallet:null}; // Wallet null = sheet tab not created yet
 const sig = {};
 let firstLoadDone = false;
 
@@ -729,11 +756,9 @@ async function seedIfEmpty(tab, rows){
 
 async function loadTab(tab, allowSeed){
   let rows = await fetchTab(tab);
-  if(allowSeed && rows.length === 0 && (SEEDS[tab].length || tab==='Hotels' || tab==='Activities')){
-    if(SEEDS[tab].length || tab==='Hotels' || tab==='Activities'){
-      // Hotels/Activities get just a header row so the sheet is self-describing
-      rows = await seedIfEmpty(tab, rows);
-    }
+  // Wallet may be created in the sheet at any time → always seed it when found empty
+  if((allowSeed || tab === 'Wallet') && rows.length === 0){
+    rows = await seedIfEmpty(tab, rows);   // header row (+ seed data) so the sheet is self-describing
   }
   const s = JSON.stringify(rows);
   const changed = sig[tab] !== s;
@@ -744,7 +769,16 @@ async function loadTab(tab, allowSeed){
 async function syncAll(seed=false, tabs=Object.keys(HEADERS)){
   try{
     setSync('');
-    const results = await Promise.all(tabs.map(t => loadTab(t, seed)));
+    const results = await Promise.all(tabs.map(async t => {
+      try{ return await loadTab(t, seed); }
+      catch(e){
+        if(t === 'Wallet'){ // tab not created in the sheet yet — degrade gracefully
+          const changed = S.Wallet !== null; S.Wallet = null; sig.Wallet = 'missing'; return changed;
+        }
+        if(!firstLoadDone) throw e;
+        return false;
+      }
+    }));
     setSync('ok');
     const changedTabs = tabs.filter((t,i)=>results[i]);
     if(changedTabs.length) renderAll(changedTabs, firstLoadDone);
@@ -767,8 +801,20 @@ function flights(){
   }).filter(f => f.route).sort((a,b) => (a.depAt||0) - (b.depAt||0));
 }
 function spends(){
-  return S.Spends.map(r => ({date:parseCellDate(r[0]), amount:parseFloat(r[1])||0, cat:String(r[2]||'Misc'), loc:String(r[3]||''), notes:String(r[4]||'')}))
+  return S.Spends.map(r => ({date:parseCellDate(r[0]), amount:parseFloat(r[1])||0, cat:String(r[2]||'Misc'), loc:String(r[3]||''), notes:String(r[4]||''),
+    mode:String(r[5]||''), paidCur:String(r[6]||''), paidAmt:parseFloat(r[7])||0}))
     .filter(s => s.amount > 0);
+}
+function walletBal(){
+  if(!S.Wallet) return null;   // Wallet tab not created in the sheet yet
+  const bal = {USD:0, MYR:0, INR:0};
+  S.Wallet.forEach(r => {
+    const fc = String(r[2]||''), tc = String(r[4]||'');
+    if(bal[fc] != null) bal[fc] -= parseFloat(r[3])||0;
+    if(bal[tc] != null) bal[tc] += parseFloat(r[5])||0;
+  });
+  spends().forEach(s => { if(s.mode.endsWith('cash') && bal[s.paidCur] != null) bal[s.paidCur] -= s.paidAmt; });
+  return bal;
 }
 function checklist(){
   // append-only sheet → last row per task wins (toggle history stays in sheet as audit trail)
@@ -910,11 +956,14 @@ function renderBudget(){
   bPct.textContent = `${pct.toFixed(1)}% of ${fmtINR(total)} used`;
 
   // overview snapshot
+  const ovBal = walletBal();
+  const ovCard = sp.filter(s => s.mode === 'Scapia card').reduce((a,s)=>a+s.amount,0);
   document.getElementById('ovBudget').innerHTML = `
     <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
       <span class="bignum" style="color:${left<0?'var(--danger)':'var(--accent)'}">${fmtINR(left)}</span>
       <span class="muted">left of ${fmtINR(total)}</span></div>
-    <div class="bar"><i class="${bBar.className}" style="width:${pct}%"></i></div>`;
+    <div class="bar"><i class="${bBar.className}" style="width:${pct}%"></i></div>
+    ${ovBal ? `<div class="muted" style="margin-top:9px">💵 $${ovBal.USD.toLocaleString('en-IN',{maximumFractionDigits:0})} + RM ${ovBal.MYR.toLocaleString('en-IN',{maximumFractionDigits:0})} in cash &nbsp;·&nbsp; 💳 ${fmtINR(ovCard)} on Scapia</div>` : ''}`;
 
   // donut of spends by category
   const byCat = {};
@@ -942,12 +991,35 @@ function renderBudget(){
       <div class="bar"><i class="${p>=100?'over':p>75?'warn':''}" style="width:${p}%;background:${p>=100?'var(--danger)':CAT_COLOR[c]}"></i></div></div>`;
   }).join('');
 
+  // wallet (cash + Scapia card)
+  const bal = walletBal();
+  const cardSpent = sp.filter(s => s.mode === 'Scapia card').reduce((a,s)=>a+s.amount,0);
+  const convBox = document.getElementById('convBox');
+  if(!bal){
+    convBox.style.display = 'none';
+    document.getElementById('walletBody').innerHTML =
+      `<div class="empty">One-time setup: open your Google Sheet and add a tab named <b>Wallet</b> (＋ at the bottom).<br>Cash tracking switches on automatically — your $500 gets pre-loaded.</div>`;
+  } else {
+    convBox.style.display = '';
+    const cashInr = rates ? convert(bal.USD,'USD','INR') + convert(bal.MYR,'MYR','INR') : 0;
+    document.getElementById('walletBody').innerHTML = `
+      <div class="statrow">
+        <div class="stat"><b>$ ${bal.USD.toLocaleString('en-IN',{maximumFractionDigits:0})}</b><span>USD cash</span></div>
+        <div class="stat"><b>RM ${bal.MYR.toLocaleString('en-IN',{maximumFractionDigits:0})}</b><span>MYR cash</span></div>
+        <div class="stat"><b>${fmtINR(cardSpent)}</b><span>Scapia spent</span></div>
+      </div>
+      ${rates ? `<div class="muted">Cash on hand ≈ <b>${fmtINR(cashInr)}</b> at live rates</div>` : ''}`;
+  }
+
   // recent spends
+  const MODE_ICON = {'Scapia card':'💳','MYR cash':'💵','USD cash':'💵','UPI / Other':'📲'};
   const recent = [...sp].sort((a,b)=>(b.date||0)-(a.date||0)).slice(0,12);
-  document.getElementById('spendsList').innerHTML = recent.length ? recent.map(s => `
-    <div class="spenditem"><div class="ic">${CAT_ICON[s.cat]||'💸'}</div>
-      <div class="mid"><b>${esc(s.notes || s.cat)}</b><span>${fmtDate(s.date)}${s.loc?` · ${esc(s.loc)}`:''}</span></div>
-      <div class="amt">${fmtINR(s.amount)}</div></div>`).join('') : '<div class="empty">No spends logged yet</div>';
+  document.getElementById('spendsList').innerHTML = recent.length ? recent.map(s => {
+    const paid = s.paidCur && s.paidCur !== 'INR' && s.paidAmt ? ` · ${s.paidCur==='MYR'?'RM ':'$'}${s.paidAmt.toLocaleString('en-IN',{maximumFractionDigits:2})}` : '';
+    return `<div class="spenditem"><div class="ic">${CAT_ICON[s.cat]||'💸'}</div>
+      <div class="mid"><b>${esc(s.notes || s.cat)}</b><span>${fmtDate(s.date)}${s.loc?` · ${esc(s.loc)}`:''}${paid}${s.mode?` · ${MODE_ICON[s.mode]||''}`:''}</span></div>
+      <div class="amt">${fmtINR(s.amount)}</div></div>`;
+  }).join('') : '<div class="empty">No spends logged yet</div>';
 
   // shopping haul (auto from Spends)
   const shop = sp.filter(s => s.cat === 'Shopping').sort((a,b)=>(b.date||0)-(a.date||0));
@@ -1114,9 +1186,15 @@ async function handleForm(form, buildRow, tab, okMsg, after){
     btn.disabled = false; btn.textContent = old;
   });
 }
-handleForm(document.getElementById('spendForm'), fd => [
-  toSheetDate(fd.get('date')), parseFloat(fd.get('amount')), fd.get('category'), fd.get('location'), fd.get('notes')
-], 'Spends', '💸 Spend logged!', () => { spendForm.date.value = todayISO(); });
+handleForm(document.getElementById('spendForm'), fd => {
+  const amt = parseFloat(fd.get('amount')), cur = fd.get('cur');
+  if(cur !== 'INR' && !rates) throw new Error('rates not loaded yet');
+  const inr = cur === 'INR' ? amt : Math.round(convert(amt, cur, 'INR'));
+  return [toSheetDate(fd.get('date')), inr, fd.get('category'), fd.get('location'), fd.get('notes'), fd.get('mode'), cur, amt];
+}, 'Spends', '💸 Spend logged!', () => { spendForm.date.value = todayISO(); spendForm.cur.value = defaultCur(); inrHint.textContent = ''; });
+handleForm(document.getElementById('convForm'), fd => [
+  toSheetDate(todayISO()), 'Convert', fd.get('fromCur'), parseFloat(fd.get('fromAmt')), 'MYR', parseFloat(fd.get('toAmt')), fd.get('notes')
+], 'Wallet', '💱 Exchange logged!', () => { convHint.textContent = ''; });
 handleForm(document.getElementById('flightForm'), fd => [
   toSheetDate(fd.get('date')), fd.get('route').toUpperCase(), fd.get('fno').toUpperCase(), `'${fd.get('dep')}`, `'${fd.get('arr')}`, fd.get('pnr').toUpperCase()
 ], 'Flights', '✈️ Flight added!');
@@ -1131,7 +1209,29 @@ handleForm(document.getElementById('actForm'), fd => [
 ], 'Activities', '🎯 Activity saved!', () => { actForm.city.value = curCity; });
 
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const defaultCur = () => (Date.now() >= TRIP_START.getTime() && Date.now() <= TRIP_END.getTime()) ? 'MYR' : 'INR';
 spendForm.date.value = todayISO();
+spendForm.cur.value = defaultCur();
+
+// live ₹-equivalent hint on the spend form
+function updInrHint(){
+  const amt = parseFloat(spendForm.amount.value), cur = spendForm.cur.value;
+  document.getElementById('inrHint').textContent =
+    (rates && amt > 0 && cur !== 'INR') ? `≈ ${fmtINR(convert(amt, cur, 'INR'))} against budget` : '';
+}
+spendForm.amount.addEventListener('input', updInrHint);
+spendForm.cur.addEventListener('input', updInrHint);
+
+// live effective-rate hint on the exchange form
+function updConvHint(){
+  const f = parseFloat(convForm.fromAmt.value), t = parseFloat(convForm.toAmt.value), cur = convForm.fromCur.value;
+  if(!(f > 0 && t > 0)){ document.getElementById('convHint').textContent = ''; return; }
+  const eff = t / f;
+  const live = rates ? convert(1, cur, 'MYR') : null;
+  document.getElementById('convHint').textContent =
+    `Effective rate: ${eff.toFixed(3)} RM per ${cur}` + (live ? ` · live mid-market ${live.toFixed(3)}${eff < live*0.97 ? ' — you can do better 👀' : ' 👍'}` : '');
+}
+['fromAmt','toAmt','fromCur'].forEach(n => convForm[n].addEventListener('input', updConvHint));
 
 // geolocation prefill for spend location
 document.getElementById('geoBtn').onclick = () => {
@@ -1180,7 +1280,7 @@ function renderAll(tabs, animate){
   if(tabs.includes('Flights')) { renderFlights(); if(animate) pulse('ovFlight'); }
   if(tabs.includes('Hotels')) renderHotels();
   if(tabs.includes('Itinerary')) renderItinerary();
-  if(tabs.includes('Budget') || tabs.includes('Spends')) renderBudget();
+  if(tabs.includes('Budget') || tabs.includes('Spends') || tabs.includes('Wallet')) renderBudget();
   if(tabs.includes('Checklist')) renderChecklist();
   if(tabs.includes('Activities')) renderActivities();
 }
@@ -1190,7 +1290,7 @@ loadRates(); setInterval(loadRates, 30*60000);
 
 (async () => {
   await syncAll(true);                                     // first load: seed empty tabs
-  setInterval(() => syncAll(false, ['Spends','Checklist','Activities']), POLL_FAST);
+  setInterval(() => syncAll(false, ['Spends','Checklist','Activities','Wallet']), POLL_FAST);
   setInterval(() => syncAll(false, ['Flights','Hotels','Itinerary','Budget']), POLL_SLOW);
   document.addEventListener('visibilitychange', () => { if(!document.hidden) syncAll(); });
 })();
