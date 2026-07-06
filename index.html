@@ -356,7 +356,7 @@ details.addbox form{margin-top:12px}
         <div class="fgrid">
           <div><label class="f">Date</label><input name="date" type="date" required></div>
           <div><label class="f">Route (e.g. KUL-LGK)</label><input name="route" placeholder="KUL-LGK" required style="text-transform:uppercase"></div>
-          <div><label class="f">Flight no.</label><input name="fno" placeholder="AK6224" required></div>
+          <div><label class="f">Flight no. (type BUS for buses)</label><input name="fno" placeholder="AK6224 or BUS" required></div>
           <div><label class="f">PNR</label><input name="pnr" placeholder="ABC123"></div>
           <div><label class="f">Departure</label><input name="dep" type="time" required></div>
           <div><label class="f">Arrival</label><input name="arr" type="time" required></div>
@@ -364,7 +364,7 @@ details.addbox form{margin-top:12px}
         </div>
       </form>
     </details>
-    <div class="tip">💡 <b>Still to book:</b> KUL→LGK (27 Jul), LGK→PEN (30 Jul — ferry doesn't run anymore, fly or check latest), PEN→KUL (1 Aug). AirAsia & Batik Air are cheapest; book by <b>12 Jul</b> before fares climb. Morning flights = fewer monsoon-season delays.</div>
+    <div class="tip">💡 <b>Last leg to book: PEN→KUL bus on 1 Aug.</b> Book on <b>BusOnlineTicket.com or Easybook</b> — Penang Sungai Nibong (or Komtar for some operators) → KL TBS, ~5 hrs, RM 40–60/pp. Take a <b>morning departure (~09:30)</b> so you reach KL by mid-afternoon with buffer before the 2 Aug flight. Once booked, add it here with flight no. <b>BUS</b> — the card will remind you to leave 1 hr before.</div>
   </div>
 
   <div class="card">
@@ -384,7 +384,7 @@ details.addbox form{margin-top:12px}
         </div>
       </form>
     </details>
-    <div class="tip">💡 <b>Where to stay:</b> Langkawi — Pantai Cenang (walkable beach + restaurants, great for the birthday) or Pantai Tengah (quieter). Penang — George Town heritage core (Love Lane / Chulia St area) puts all the street art & food on foot. You only need hotels for 27–31 Jul (4 nights) since KL is covered by Rishabh & Tarushi. 🙏</div>
+    <div class="tip">💡 Both hotels booked ✔ — White Lodge is right on Pantai Cenang (sunset at your doorstep), and 22 Macalisterz is a 15-min walk / 5-min Grab from the George Town street-art core. Screenshot both booking confirmations to your phone for offline check-in.</div>
   </div>
 </section>
 
@@ -678,15 +678,16 @@ const SEEDS = {
 /* ═══════════════════════════════════════════════════════
    API LAYER  — fetchTab / appendRow (+ robust cell decoding)
 ═══════════════════════════════════════════════════════ */
+const RAW_COUNT = {};   // non-empty rows incl. headers — used so we never re-seed a tab that already has a header
 async function fetchTab(tab){
   const r = await fetch(`${API}?tab=${encodeURIComponent(tab)}`, {redirect:'follow'});
   if(!r.ok) throw new Error(`GET ${tab} → ${r.status}`);
   const rows = await r.json();
   if(!Array.isArray(rows)) return [];
   const head = HEADERS[tab];
-  return rows.filter(row =>
-    Array.isArray(row) &&
-    row.some(c => String(c ?? '').trim() !== '') &&
+  const nonEmpty = rows.filter(row => Array.isArray(row) && row.some(c => String(c ?? '').trim() !== ''));
+  RAW_COUNT[tab] = nonEmpty.length;
+  return nonEmpty.filter(row =>
     String(row[0]).trim() !== '__test__' &&
     !(head && String(row[0]).trim().toLowerCase() === head[0].toLowerCase() &&
       String(row[1] ?? '').trim().toLowerCase() === (head[1]||'').toLowerCase())
@@ -764,7 +765,8 @@ async function seedIfEmpty(tab, rows){
 async function loadTab(tab, allowSeed){
   let rows = await fetchTab(tab);
   // optional tabs may be created in the sheet at any time → always seed them when found empty
-  if((allowSeed || OPTIONAL_TABS.includes(tab)) && rows.length === 0){
+  // RAW_COUNT guards against re-seeding a tab that already has its header row
+  if((allowSeed || OPTIONAL_TABS.includes(tab)) && rows.length === 0 && RAW_COUNT[tab] === 0){
     rows = await seedIfEmpty(tab, rows);   // header row (+ seed data) so the sheet is self-describing
   }
   const s = JSON.stringify(rows);
@@ -807,7 +809,9 @@ function flights(){
     const d = parseCellDate(r[0]), dep = parseCellTime(r[3]), arr = parseCellTime(r[4]);
     let depAt = null;
     if(d && dep) depAt = new Date(d.getFullYear(), d.getMonth(), d.getDate(), dep.h, dep.m);
-    return {date:d, route:String(r[1]||''), no:String(r[2]||''), dep, arr, pnr:String(r[5]||''), depAt};
+    const no = String(r[2]||'');
+    return {date:d, route:String(r[1]||''), no, dep, arr, pnr:String(r[5]||''), depAt,
+      isBus: /bus/i.test(no) || /bus/i.test(String(r[1]||''))};
   }).filter(f => f.route).sort((a,b) => (a.depAt||0) - (b.depAt||0));
 }
 function spends(){
@@ -871,20 +875,21 @@ function tickCountdown(){
 
 function nextFlightHTML(f, big){
   if(!f) return `<div class="empty">No upcoming flights on the sheet ✈️</div>`;
-  const leaveBy = new Date(f.depAt.getTime() - 4*3600000);
+  const bufH = f.isBus ? 1 : 4;   // bus terminal 1 hr, airport 4 hrs before departure
+  const leaveBy = new Date(f.depAt.getTime() - bufH*3600000);
   const hrsAway = (f.depAt - Date.now()) / 3600000;
   const countTxt = hrsAway > 48 ? `in ${Math.round(hrsAway/24)} days` :
-                   hrsAway > 0  ? `in ${Math.floor(hrsAway)}h ${Math.round((hrsAway%1)*60)}m` : 'boarding soon';
+                   hrsAway > 0  ? `in ${Math.floor(hrsAway)}h ${Math.round((hrsAway%1)*60)}m` : f.isBus ? 'departing soon' : 'boarding soon';
   return `
-    <div class="frow"><span class="route">${esc(f.route.replace('-',' → '))}</span>
+    <div class="frow"><span class="route">${f.isBus?'🚌 ':''}${esc(f.route.replace('-',' → '))}</span>
       <span class="tag teal">${esc(f.no)}</span><span class="grow" style="flex:1"></span>
       <span class="tag gold">${countTxt}</span></div>
     <div class="ftimes">
       <div><b>${fmtTime(f.dep)}</b><br><span class="muted">${fmtDateFull(f.date)}</span></div>
       <div style="text-align:right"><b>${fmtTime(f.arr)}</b><br><span class="muted">arrival (local)</span></div>
     </div>
-    ${f.pnr ? `<div class="muted" style="margin-top:6px">PNR: <b>${esc(f.pnr)}</b></div>` : ''}
-    ${big ? `<div class="leaveby">🚕 Leave for the airport by <b>&nbsp;${fmtTime({h:leaveBy.getHours(),m:leaveBy.getMinutes()})}</b>&nbsp; (4 hrs before departure)</div>` : ''}`;
+    ${f.pnr ? `<div class="muted" style="margin-top:6px">${f.isBus?'Booking ref':'PNR'}: <b>${esc(f.pnr)}</b></div>` : ''}
+    ${big ? `<div class="leaveby">🚕 Leave for the ${f.isBus?'bus terminal':'airport'} by <b>&nbsp;${fmtTime({h:leaveBy.getHours(),m:leaveBy.getMinutes()})}</b>&nbsp; (${bufH} hr${bufH>1?'s':''} before departure)</div>` : ''}`;
 }
 
 const AIRPORT_CK = ['Passports ×2','Boarding passes (digital + print)','Phone & powerbank charged','Wallet + forex card','MDAC confirmation','House keys handed over / locked'];
@@ -910,10 +915,10 @@ function renderFlights(){
   renderAirportCk(next);
   document.getElementById('flightsList').innerHTML = fs.length ? fs.map(f => `
     <div class="flightcard ${f.depAt && f.depAt < now ? 'past':''}">
-      <div class="frow"><span class="route" style="font-size:15px">${esc(f.route.replace('-',' → '))}</span>
+      <div class="frow"><span class="route" style="font-size:15px">${f.isBus?'🚌 ':''}${esc(f.route.replace('-',' → '))}</span>
         <span class="tag teal">${esc(f.no)}</span><span style="flex:1"></span>
         <span class="muted">${fmtDateFull(f.date)}</span></div>
-      <div class="muted" style="margin-top:4px">🛫 ${fmtTime(f.dep)} &nbsp;→&nbsp; 🛬 ${fmtTime(f.arr)}${f.pnr ? ` &nbsp;·&nbsp; PNR <b>${esc(f.pnr)}</b>`:''}</div>
+      <div class="muted" style="margin-top:4px">${f.isBus?'🚌':'🛫'} ${fmtTime(f.dep)} &nbsp;→&nbsp; ${f.isBus?'🏁':'🛬'} ${fmtTime(f.arr)}${f.pnr ? ` &nbsp;·&nbsp; ${f.isBus?'Ref':'PNR'} <b>${esc(f.pnr)}</b>`:''}</div>
     </div>`).join('') : '<div class="empty">No flights yet</div>';
 }
 
@@ -930,8 +935,11 @@ function renderHotels(){
    RENDER — itinerary
 ═══════════════════════════════════════════════════════ */
 function renderItinerary(){
-  const items = S.Itinerary.map(r => ({date:parseCellDate(r[0]), city:String(r[1]||''), plan:String(r[2]||'')}))
-    .filter(i => i.date).sort((a,b) => a.date - b.date);
+  // append-only sheet → last row per date wins (lets plans be revised without deleting)
+  const byDate = new Map();
+  S.Itinerary.map(r => ({date:parseCellDate(r[0]), city:String(r[1]||''), plan:String(r[2]||'')}))
+    .filter(i => i.date).forEach(i => byDate.set(localISO(i.date), i));
+  const items = [...byDate.values()].sort((a,b) => a.date - b.date);
   const today = new Date();
   document.getElementById('timeline').innerHTML = items.length ? items.map(i => `
     <div class="tlitem ${sameDay(i.date,today)?'today':''}" style="--dot:${CITY_DOT[i.city]||'var(--accent)'}">
