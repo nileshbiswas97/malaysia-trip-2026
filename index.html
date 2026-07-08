@@ -220,6 +220,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 }
 .citytabs button.active{background:var(--accent);border-color:var(--accent);color:#fff}
 #map{height:280px;border-radius:14px;border:1px solid var(--line);z-index:1}
+.hpin{width:32px;height:32px;background:var(--gold);border:2.5px solid #fff;border-radius:50% 50% 50% 4px;transform:rotate(0deg);display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 3px 8px rgba(0,0,0,.35)}
+.dirlink{display:inline-block;margin-top:7px;font-size:12px;font-weight:800;color:var(--accent);text-decoration:none;background:var(--accent2);padding:4px 10px;border-radius:8px}
+.leaflet-popup-content a{color:var(--accent);font-weight:700}
 .actcard{background:var(--card2);border:1px solid var(--line);border-radius:13px;padding:11px 13px;margin-bottom:9px}
 .actcard b{font-size:14px}
 .actcard .n{font-size:12.5px;color:var(--text2);margin-top:3px;line-height:1.4}
@@ -544,7 +547,7 @@ details.addbox form{margin-top:12px}
       <form id="actForm">
         <div class="fgrid">
           <div><label class="f">City</label><select name="city"><option>Kuala Lumpur</option><option>Langkawi</option><option>Penang</option></select></div>
-          <div><label class="f">Type</label><select name="type"><option>Sight</option><option>Food</option><option>Beach</option><option>Adventure</option><option>Shopping</option><option>Nature</option><option>Other</option></select></div>
+          <div><label class="f">Type</label><select name="type"><option>Sight</option><option>Food</option><option>Beach</option><option>Adventure</option><option>Shopping</option><option>Nature</option><option>Hotel</option><option>Other</option></select></div>
           <div class="full"><label class="f">Name</label><input name="name" required placeholder="Batu Caves"></div>
           <div class="full"><label class="f">Notes</label><input name="notes" placeholder="Go before 9am, 272 steps"></div>
           <div><label class="f">Lat</label><input name="lat" type="number" step="any" placeholder="3.2379"></div>
@@ -1097,7 +1100,8 @@ function renderChecklist(){
    RENDER — activities + map
 ═══════════════════════════════════════════════════════ */
 let map, markers = [], curCity = 'Kuala Lumpur', mapInit = false;
-const TYPE_ICON = {Sight:'🏛️',Food:'🍜',Beach:'🏖️',Adventure:'🪂',Shopping:'🛍️',Nature:'🌿',Other:'📌'};
+const TYPE_ICON = {Sight:'🏛️',Food:'🍜',Beach:'🏖️',Adventure:'🪂',Shopping:'🛍️',Nature:'🌿',Hotel:'🏨',Other:'📌'};
+const gmapsDir = (lat,lng) => `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 const CITY_TIPS = {
  'Kuala Lumpur':`<h2>💡 KL — dos & don'ts</h2><div class="dodont">
    <div class="do"><b>✓ Do</b><ul><li>Petronas Towers at night (photo from KLCC park lake)</li><li>Batu Caves before 9:30am — beat heat & crowds</li><li>Jalan Alor night food street; Nasi Kandar at any mamak</li><li>Use Grab everywhere — cheap & honest pricing</li><li>Ask Rishabh & Tarushi for their local haunts — resident intel beats any list</li></ul></div>
@@ -1124,15 +1128,24 @@ function initMap(){
 function renderActivities(){
   document.getElementById('actCityName').textContent = curCity;
   document.getElementById('cityTips').innerHTML = CITY_TIPS[curCity] || '';
-  const acts = activities().filter(a => a.city === curCity);
+  const acts = activities().filter(a => a.city === curCity)
+    .sort((a,b) => (b.type==='Hotel') - (a.type==='Hotel'));   // our stay pinned to the top
   document.getElementById('actList').innerHTML = acts.length ? acts.map(a => `
-    <div class="actcard"><b>${TYPE_ICON[a.type]||'📌'} ${esc(a.name)}</b> <span class="tag teal">${esc(a.type)}</span>
-      ${a.notes?`<div class="n">${esc(a.notes)}</div>`:''}</div>`).join('')
+    <div class="actcard" ${a.type==='Hotel'?'style="border-color:var(--gold);background:#d9930d12"':''}>
+      <b>${TYPE_ICON[a.type]||'📌'} ${esc(a.name)}</b> <span class="tag ${a.type==='Hotel'?'gold':'teal'}">${esc(a.type)}</span>
+      ${a.notes?`<div class="n">${esc(a.notes)}</div>`:''}
+      ${!isNaN(a.lat) && !isNaN(a.lng) ? `<a class="dirlink" href="${gmapsDir(a.lat,a.lng)}" target="_blank" rel="noopener">🧭 Directions</a>` : ''}
+    </div>`).join('')
     : '<div class="empty">No spots saved for ' + esc(curCity) + ' yet — tap the map or add below.</div>';
   if(!mapInit) return;
   markers.forEach(m => map.removeLayer(m)); markers = [];
   acts.filter(a => !isNaN(a.lat) && !isNaN(a.lng)).forEach(a => {
-    const m = L.marker([a.lat, a.lng]).addTo(map).bindPopup(`<b>${esc(a.name)}</b><br>${esc(a.type)}${a.notes?'<br>'+esc(a.notes):''}`);
+    const opts = a.type === 'Hotel'
+      ? {icon: L.divIcon({className:'', html:'<div class="hpin">🏨</div>', iconSize:[32,32], iconAnchor:[16,30], popupAnchor:[0,-28]}), zIndexOffset: 500}
+      : {};
+    const m = L.marker([a.lat, a.lng], opts).addTo(map).bindPopup(
+      `<b>${esc(a.name)}</b><br>${esc(a.type)}${a.notes?'<br>'+esc(a.notes):''}<br>` +
+      `<a href="${gmapsDir(a.lat,a.lng)}" target="_blank" rel="noopener">🧭 Directions in Google Maps</a>`);
     markers.push(m);
   });
   map.setView(CITY_CENTER[curCity], curCity==='Kuala Lumpur' ? 11 : 10);
