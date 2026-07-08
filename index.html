@@ -387,7 +387,7 @@ details.addbox form{margin-top:12px}
         </div>
       </form>
     </details>
-    <div class="tip">💡 Both hotels booked ✔ — White Lodge is right on Pantai Cenang (sunset at your doorstep), and 22 Macalisterz is a 15-min walk / 5-min Grab from the George Town street-art core. Screenshot both booking confirmations to your phone for offline check-in.</div>
+    <div class="tip">💡 Both hotels booked ✔ — White Lodge is right on Pantai Cenang (sunset at your doorstep), and Apple Heritage sits on the seafront boulevard, ~15-min walk / 5-min Grab to the street-art core. Screenshot both booking confirmations to your phone for offline check-in.</div>
   </div>
 </section>
 
@@ -843,8 +843,12 @@ function checklist(){
   return [...map.values()];
 }
 function activities(){
-  return S.Activities.map(r => ({city:String(r[0]||''), name:String(r[1]||''), type:String(r[2]||'Other'), notes:String(r[3]||''), lat:parseFloat(r[4]), lng:parseFloat(r[5])}))
+  const all = S.Activities.map(r => ({city:String(r[0]||''), name:String(r[1]||''), type:String(r[2]||'Other'), notes:String(r[3]||''), lat:parseFloat(r[4]), lng:parseFloat(r[5])}))
     .filter(a => a.name);
+  // hotels change — keep only the newest Hotel row per city (append-only sheet)
+  const lastHotel = {};
+  all.forEach((a,i) => { if(a.type === 'Hotel') lastHotel[a.city] = i; });
+  return all.filter((a,i) => a.type !== 'Hotel' || lastHotel[a.city] === i);
 }
 function budgetAlloc(){
   const m = {};
